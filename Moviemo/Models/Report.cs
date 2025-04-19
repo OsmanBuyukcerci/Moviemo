@@ -1,7 +1,12 @@
-﻿namespace Moviemo.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
+
+namespace Moviemo.Models
 {
     public class Report
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long reportId { get; set; }
         public string title { get; set; }
         public string details { get; set; }

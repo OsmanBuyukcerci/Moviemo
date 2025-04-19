@@ -1,7 +1,12 @@
-﻿namespace Moviemo.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
+
+namespace Moviemo.Models
 {
     public class Review
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long reviewId { get; set; }
         public string body { get; set; }
         public User author { get; set; }
