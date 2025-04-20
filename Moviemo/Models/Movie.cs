@@ -13,7 +13,7 @@ namespace Moviemo.Models
         public double tmdbScore { get; set; }
         public string posterPath { get; set; }
         public string trailerUrl { get; set; }
-        ICollection<Review> reviews { get; set; }
-        ICollection<Comment> comments { get; set; }
+        public ICollection<Review> reviews { get; set; }
+        public ICollection<Comment> comments { get; set; }
     }
 }
