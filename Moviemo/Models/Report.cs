@@ -7,10 +7,18 @@ namespace Moviemo.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public long reportId { get; set; }
-        public string title { get; set; }
-        public string details { get; set; }
-        public User author { get; set; }
-        public DateTime createdAt { get; set; }
+        public long ReportId { get; set; }
+
+        [Required]
+        [ForeignKey("UserId")]
+        public required User User { get; set; }
+
+        [Required]
+        public required string Title { get; set; }
+
+        [Required]
+        public required string Details { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

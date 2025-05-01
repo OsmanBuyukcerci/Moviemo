@@ -7,13 +7,23 @@ namespace Moviemo.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public long movieId { get; set; }
-        public string title { get; set; }
-        public string overview { get; set; }
-        public double tmdbScore { get; set; }
-        public string posterPath { get; set; }
-        public string trailerUrl { get; set; }
-        public ICollection<Review> reviews { get; set; }
-        public ICollection<Comment> comments { get; set; }
+        public long MovieId { get; set; }
+
+        [Required]
+        public required string Title { get; set; }
+
+        [Required]
+        public required string Overview { get; set; }
+
+        public double TmdbScore { get; set; }
+
+        [Required]
+        public required string PosterPath { get; set; }
+
+        [Required]
+        public required string TrailerUrl { get; set; }
+
+        public ICollection<Review> Reviews { get; set; } = new List<Review>();
+        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     }
 }

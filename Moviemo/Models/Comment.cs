@@ -7,12 +7,21 @@ namespace Moviemo.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public long commentId {  get; set; }
-        public string body { get; set; }
-        public User author { get; set; }
-        public long likeCounter { get; set; }
-        public long dislikeCounter { get; set; }
-        public DateTime createdAt { get; set; }
-        public DateTime updatedAt { get; set; }
+        public long CommentId {  get; set; }
+
+        [Required]
+        public required string Body { get; set; }
+
+        [Required]
+        [ForeignKey("UserId")]
+        public required User User { get; set; }
+
+        [Required]
+        [ForeignKey("MovieId")]
+        public required Movie Movie { get; set; }
+
+        public ICollection<Vote> Votes { get; set; } = new List<Vote>();
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime UpdatedAt { get; set; } = DateTime.Now;
     }
 }

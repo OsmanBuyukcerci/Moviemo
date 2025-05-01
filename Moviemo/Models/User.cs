@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Identity;
 
 namespace Moviemo.Models
 {
@@ -8,16 +7,29 @@ namespace Moviemo.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public long userId {  get; set; }
-        public string name {  get; set; }
-        public string surname { get; set; }
-        public string username { get; set; }
-        public string password { get; set; }
-        public string email { get; set; }
-        public UserRole userRole { get; set; }
-        public ICollection<Review> reviews { get; set; }
-        public ICollection<Comment> comments { get; set; }
-        
+        public long UserId {  get; set; }
+
+        [Required]
+        public required string Name {  get; set; }
+
+        [Required]
+        public required string Surname { get; set; }
+
+        [Required]
+        public required string Username { get; set; }
+
+        [Required]
+        public required string Password { get; set; }
+
+        [Required]
+        public required string Email { get; set; }
+
+        [Required]
+        public required UserRole UserRole { get; set; }
+
+        public ICollection<Review> Reviews { get; set; } = new List<Review>();
+        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+        public ICollection<Report> Reports { get; set; } = new List<Report>();
     }
 
     public enum UserRole
