@@ -17,16 +17,11 @@ namespace Moviemo.Models
 
         public DateTime VotedAt { get; set; } = DateTime.Now;
 
-        /* 
-            If CommentId is different than -1 this vote belongs to a comment
-            If ReviewId is different than -1 this vote belongs to a review
-        */
+        [Required]
+        public required long CommentId { get; set; }
 
         [ForeignKey("CommentId")]
-        public Comment Comment { get; set; }
-
-        [ForeignKey("ReviewId")]
-        public long ReviewId { get; set; }
+        public required Comment? Comment { get; set; }
     }
 
     public enum VoteType

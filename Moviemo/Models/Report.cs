@@ -10,6 +10,8 @@ namespace Moviemo.Models
         public long ReportId { get; set; }
 
         [Required]
+        public required long UserId { get; set; }
+
         [ForeignKey("UserId")]
         public required User User { get; set; }
 
@@ -19,6 +21,6 @@ namespace Moviemo.Models
         [Required]
         public required string Details { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }
