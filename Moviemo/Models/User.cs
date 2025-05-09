@@ -26,10 +26,6 @@ namespace Moviemo.Models
 
         [Required]
         public required UserRole UserRole { get; set; }
-
-        public ICollection<Review> Reviews { get; set; } = new List<Review>();
-        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
-        public ICollection<Report> Reports { get; set; } = new List<Report>();
     }
 
     public enum UserRole

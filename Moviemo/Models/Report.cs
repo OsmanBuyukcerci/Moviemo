@@ -13,7 +13,7 @@ namespace Moviemo.Models
         public required long UserId { get; set; }
 
         [ForeignKey("UserId")]
-        public required User User { get; set; }
+        public User User { get; set; }
 
         [Required]
         public required string Title { get; set; }

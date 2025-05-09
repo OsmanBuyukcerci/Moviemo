@@ -21,7 +21,7 @@ namespace Moviemo.Models
         public required long CommentId { get; set; }
 
         [ForeignKey("CommentId")]
-        public required Comment Comment { get; set; }
+        public Comment Comment { get; set; }
     }
 
     public enum VoteType

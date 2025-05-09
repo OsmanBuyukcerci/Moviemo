@@ -22,8 +22,5 @@ namespace Moviemo.Models
 
         [Required]
         public required string TrailerUrl { get; set; }
-
-        public ICollection<Review> Reviews { get; set; } = new List<Review>();
-        public ICollection<Comment> Comments { get; set; } = new List<Comment>();
     }
 }
