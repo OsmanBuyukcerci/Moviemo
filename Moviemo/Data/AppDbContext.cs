@@ -21,33 +21,45 @@ namespace Moviemo.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<Models.Comment>()
-                .HasOne<User>()
-                .WithMany()
-                .HasForeignKey(c => c.UserId)
+                .HasOne(C => C.User)
+                .WithMany(U => U.Comments)
+                .HasForeignKey(U => U.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Models.Comment>()
-                .HasOne<Movie>()
-                .WithMany()
-                .HasForeignKey(m => m.MovieId)
+                .HasOne(C => C.Movie)
+                .WithMany(M => M.Comments)
+                .HasForeignKey(C => C.MovieId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Models.Report>()
-                .HasOne<User>()
-                .WithMany()
-                .HasForeignKey(c => c.UserId)
+                .HasOne(R => R.User)
+                .WithMany(U => U.Reports)
+                .HasForeignKey(R => R.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Models.Review>()
-                .HasOne<User>()
-                .WithMany()
-                .HasForeignKey(r => r.UserId)
+                .HasOne(R => R.User)
+                .WithMany(U => U.Reviews)
+                .HasForeignKey(R => R.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Models.Review>()
-                .HasOne<Movie>()
-                .WithMany()
-                .HasForeignKey(m => m.MovieId)
+                .HasOne(R => R.Movie)
+                .WithMany(M => M.Reviews)
+                .HasForeignKey(R => R.MovieId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Models.Vote>()
+                .HasOne(V => V.User)
+                .WithMany(U => U.Votes)
+                .HasForeignKey(V => V.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Models.Vote>()
+                .HasOne(V => V.Comment)
+                .WithMany(C => C.Votes)
+                .HasForeignKey(V => V.CommentId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

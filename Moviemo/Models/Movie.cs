@@ -7,7 +7,7 @@ namespace Moviemo.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public long MovieId { get; set; }
+        public long Id { get; set; }
 
         [Required]
         public required string Title { get; set; }
@@ -22,5 +22,8 @@ namespace Moviemo.Models
 
         [Required]
         public required string TrailerUrl { get; set; }
+
+        public ICollection<Comment> Comments { get; set; }
+        public ICollection<Review> Reviews { get; set; }
     }
 }

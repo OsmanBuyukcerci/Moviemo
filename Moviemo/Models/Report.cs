@@ -7,12 +7,11 @@ namespace Moviemo.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public long ReportId { get; set; }
+        public long Id { get; set; }
 
         [Required]
         public required long UserId { get; set; }
 
-        [ForeignKey("UserId")]
         public User User { get; set; }
 
         [Required]

@@ -7,7 +7,7 @@ namespace Moviemo.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public long UserId {  get; set; }
+        public long Id {  get; set; }
 
         [Required]
         public required string Name {  get; set; }
@@ -26,6 +26,12 @@ namespace Moviemo.Models
 
         [Required]
         public required UserRole UserRole { get; set; }
+
+        public ICollection<Comment> Comments { get; set; }
+
+        public ICollection<Report> Reports { get; set; }
+        public ICollection<Review> Reviews { get; set; }
+        public ICollection<Vote> Votes { get; set; }
     }
 
     public enum UserRole
