@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
 using Moviemo.Dtos.Comment;
@@ -101,8 +102,13 @@ namespace Moviemo.Services
                 .FirstOrDefaultAsync(U => U.Id == Id);
         }
 
-        public async Task<UserCreateDto> CreateAsync(UserCreateDto Dto)
+        public async Task<UserCreateDto?> CreateAsync(UserCreateDto Dto)
         {
+            if (await _Context.Users.AnyAsync(U => U.Username == Dto.Username))
+            {
+                return null;
+            }
+
             var User = new User
             {
                 Name = Dto.Name,
@@ -160,19 +166,21 @@ namespace Moviemo.Services
             return true;
         }
 
-        public async Task<string> LoginAsync(UserLoginDto Dto)
+        public async Task<string?> LoginAsync(UserLoginDto Dto)
         {
             var User = await _Context.Users.FirstOrDefaultAsync(U => U.Username == Dto.Username);
 
-            if (User == null) return "User not found";
+            if (User == null) return null;
 
             if (new PasswordHasher<User>().VerifyHashedPassword(User, User.PasswordHash, Dto.Password)
                 == PasswordVerificationResult.Failed)
             {
-                return "Wrong password";
+                return null;
             }
 
             string Token = _TokenService.CreateToken(User);
+
+            if (Token == null) return null;
 
             return Token;
         }

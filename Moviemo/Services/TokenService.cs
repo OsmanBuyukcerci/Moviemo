@@ -14,6 +14,7 @@ namespace Moviemo.Services
             var Claims = new List<Claim>
             {
                 new Claim(ClaimTypes.Name, User.Username),
+                new Claim(ClaimTypes.NameIdentifier, User.Id.ToString())
             };
 
             var Key = new SymmetricSecurityKey(

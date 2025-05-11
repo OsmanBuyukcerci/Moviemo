@@ -7,9 +7,9 @@ namespace Moviemo.Services.Interfaces
     {
         Task<List<UserGetDto>> GetAllAsync();
         Task<UserGetDto?> GetByIdAsync(long Id);
-        Task<UserCreateDto> CreateAsync(UserCreateDto Dto);
+        Task<UserCreateDto?> CreateAsync(UserCreateDto Dto);
         Task<bool> UpdateAsync(long Id, UserUpdateDto Dto);
         Task<bool> DeleteAsync(long Id);
-        Task<string> LoginAsync(UserLoginDto Dto);
+        Task<string?> LoginAsync(UserLoginDto Dto);
     }
 }

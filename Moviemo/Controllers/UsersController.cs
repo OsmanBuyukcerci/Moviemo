@@ -42,6 +42,8 @@ namespace Moviemo.Controllers
         {
             var User = await _UserService.CreateAsync(Dto);
 
+            if (User == null) return BadRequest("Kullanıcı adı kullanımda");
+
             return Ok(User);
         }
 
@@ -73,7 +75,7 @@ namespace Moviemo.Controllers
         {
             var Response = await _UserService.LoginAsync(Dto);
 
-            if (Response == "User not found" || Response == "Wrong password") return BadRequest(Response);
+            if (Response == null) return BadRequest("Kullanıcı adı veya parola hatalı");
 
             return Ok(Response);
         }
