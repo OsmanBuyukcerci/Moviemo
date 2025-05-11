@@ -7,5 +7,7 @@
         public required long UserId { get; set; } = -1;
         public required long MovieId { get; set; } = -1;
         public DateTime CreatedAt { get; set; }
+        public required int DownvoteCounter { get; set; }
+        public required int UpvoteCounter { get; set; }
     }
 }

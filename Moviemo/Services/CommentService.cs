@@ -27,7 +27,9 @@ namespace Moviemo.Services
                     Body = C.Body,
                     UserId = C.User.Id,
                     MovieId = C.Movie.Id,
-                    CreatedAt = C.CreatedAt
+                    CreatedAt = C.CreatedAt,
+                    DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
+                    UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
                 })
                 .ToListAsync();
         }
@@ -43,7 +45,9 @@ namespace Moviemo.Services
                     Body = C.Body,
                     UserId = C.User.Id,
                     MovieId = C.Movie.Id,
-                    CreatedAt = C.CreatedAt
+                    CreatedAt = C.CreatedAt,
+                    DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
+                    UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
                 })
                 .FirstOrDefaultAsync(C => C.Id == Id);
         }
