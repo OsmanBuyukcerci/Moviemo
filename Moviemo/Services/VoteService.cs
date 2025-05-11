@@ -24,7 +24,8 @@ namespace Moviemo.Services
                 {
                     Id = V.Id,
                     UserId = V.User.Id,
-                    CommentId = V.Comment.Id
+                    CommentId = V.Comment.Id,
+                    VoteType = V.VoteType 
                 })
                 .ToListAsync();
         }
@@ -38,7 +39,8 @@ namespace Moviemo.Services
                 {
                     Id = V.Id,
                     UserId = V.User.Id,
-                    CommentId = V.Comment.Id
+                    CommentId = V.Comment.Id,
+                    VoteType = V.VoteType
                 })
                 .FirstOrDefaultAsync(V => V.Id == Id);
         }
