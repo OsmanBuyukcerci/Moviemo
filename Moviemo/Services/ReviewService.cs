@@ -27,7 +27,8 @@ namespace Moviemo.Services
                     UserId = R.User.Id,
                     MovieId = R.Movie.Id,
                     UserScore = R.UserScore,
-                    CreatedAt = R.CreatedAt
+                    CreatedAt = R.CreatedAt,
+                    UpdatedAt = R.UpdatedAt,
                 })
                 .ToListAsync();
         }
@@ -44,7 +45,8 @@ namespace Moviemo.Services
                     UserId = R.User.Id,
                     MovieId = R.Movie.Id,
                     UserScore = R.UserScore,
-                    CreatedAt = R.CreatedAt
+                    CreatedAt = R.CreatedAt,
+                    UpdatedAt = R.UpdatedAt
                 }).FirstOrDefaultAsync(R => R.Id == Id);
         }
 
@@ -83,6 +85,8 @@ namespace Moviemo.Services
 
                 TargetProperty.SetValue(Review, NewValue);
             }
+
+            Review.UpdatedAt = DateTime.UtcNow;
 
             await _Context.SaveChangesAsync();
 

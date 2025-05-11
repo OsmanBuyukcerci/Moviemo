@@ -39,7 +39,8 @@ namespace Moviemo.Services
                         UserId = U.Id,
                         MovieId = R.Movie.Id,
                         UserScore = R.UserScore,
-                        CreatedAt = R.CreatedAt
+                        CreatedAt = R.CreatedAt,
+                        UpdatedAt = R.UpdatedAt,
                     }).ToList(),
                     Comments = U.Comments
                     .Select(C => new CommentGetDto
@@ -49,6 +50,7 @@ namespace Moviemo.Services
                         UserId = U.Id,
                         MovieId = C.Movie.Id,
                         CreatedAt = C.CreatedAt,
+                        UpdatedAt = C.UpdatedAt,
                         DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
                         UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
                     }).ToList()
@@ -76,7 +78,8 @@ namespace Moviemo.Services
                         UserId = U.Id,
                         MovieId = R.Movie.Id,
                         UserScore = R.UserScore,
-                        CreatedAt = R.CreatedAt
+                        CreatedAt = R.CreatedAt,
+                        UpdatedAt = R.UpdatedAt
                     }).ToList(),
                     Comments = U.Comments
                     .Select(C => new CommentGetDto
@@ -86,6 +89,7 @@ namespace Moviemo.Services
                         UserId = U.Id,
                         MovieId = C.Movie.Id,
                         CreatedAt = C.CreatedAt,
+                        UpdatedAt = C.UpdatedAt,
                         DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
                         UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
                     }).ToList()

@@ -28,6 +28,7 @@ namespace Moviemo.Services
                     UserId = C.User.Id,
                     MovieId = C.Movie.Id,
                     CreatedAt = C.CreatedAt,
+                    UpdatedAt = C.UpdatedAt,
                     DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
                     UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
                 })
@@ -46,6 +47,7 @@ namespace Moviemo.Services
                     UserId = C.User.Id,
                     MovieId = C.Movie.Id,
                     CreatedAt = C.CreatedAt,
+                    UpdatedAt = C.UpdatedAt,
                     DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
                     UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
                 })
@@ -86,6 +88,8 @@ namespace Moviemo.Services
 
                 TargetProperty.SetValue(Comment, NewValue);
             }
+
+            Comment.UpdatedAt = DateTime.UtcNow;
             
             await _Context.SaveChangesAsync();
 
