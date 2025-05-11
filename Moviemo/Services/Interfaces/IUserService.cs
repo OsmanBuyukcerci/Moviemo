@@ -10,5 +10,6 @@ namespace Moviemo.Services.Interfaces
         Task<UserCreateDto> CreateAsync(UserCreateDto Dto);
         Task<bool> UpdateAsync(long Id, UserUpdateDto Dto);
         Task<bool> DeleteAsync(long Id);
+        Task<string> LoginAsync(UserLoginDto Dto);
     }
 }

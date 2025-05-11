@@ -66,5 +66,16 @@ namespace Moviemo.Controllers
 
             return NoContent();
         }
+
+        // api/users/login -> Kullanıcı hesabına giriş yap
+        [HttpPost("login")]
+        public async Task<IActionResult> LoginUser([FromBody] UserLoginDto Dto)
+        {
+            var Response = await _UserService.LoginAsync(Dto);
+
+            if (Response == "User not found" || Response == "Wrong password") return BadRequest(Response);
+
+            return Ok(Response);
+        }
     }
 }

@@ -19,7 +19,7 @@ namespace Moviemo.Models
         public required string Username { get; set; }
 
         [Required]
-        public required string Password { get; set; }
+        public string PasswordHash { get; set; } = String.Empty;
 
         [Required]
         public required string Email { get; set; }

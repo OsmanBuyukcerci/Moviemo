@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
 using Moviemo.Dtos.Comment;
 using Moviemo.Dtos.Review;
@@ -12,9 +13,12 @@ namespace Moviemo.Services
     {
         private readonly AppDbContext _Context;
 
-        public UserService(AppDbContext Context)
+        private readonly ITokenInterface _TokenService;
+
+        public UserService(AppDbContext Context, ITokenInterface TokenService)
         {
             _Context = Context;
+            _TokenService = TokenService;
         }
 
         public async Task<List<UserGetDto>> GetAllAsync()
@@ -104,10 +108,14 @@ namespace Moviemo.Services
                 Name = Dto.Name,
                 Surname = Dto.Surname,
                 Username = Dto.Username,
-                Password = Dto.Password,
                 Email = Dto.Email,
                 UserRole = Dto.UserRole
             };
+
+            var HashedPassword = new PasswordHasher<User>()
+                .HashPassword(User, Dto.Password);
+
+            User.PasswordHash = HashedPassword;
 
             await _Context.Users.AddAsync(User);
             await _Context.SaveChangesAsync();
@@ -150,6 +158,23 @@ namespace Moviemo.Services
             await _Context.SaveChangesAsync();
 
             return true;
+        }
+
+        public async Task<string> LoginAsync(UserLoginDto Dto)
+        {
+            var User = await _Context.Users.FirstOrDefaultAsync(U => U.Username == Dto.Username);
+
+            if (User == null) return "User not found";
+
+            if (new PasswordHasher<User>().VerifyHashedPassword(User, User.PasswordHash, Dto.Password)
+                == PasswordVerificationResult.Failed)
+            {
+                return "Wrong password";
+            }
+
+            string Token = _TokenService.CreateToken(User);
+
+            return Token;
         }
     }
 }

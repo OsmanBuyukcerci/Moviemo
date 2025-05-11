@@ -18,6 +18,7 @@ builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IVoteService, VoteService>();
+builder.Services.AddScoped<ITokenInterface, TokenService>();
 
 var app = builder.Build();
 
