@@ -27,7 +27,6 @@ namespace Moviemo.Services
                     Id = M.Id,
                     Title = M.Title,
                     Overview = M.Overview,
-                    TmdbScore = M.TmdbScore,
                     PosterPath = M.PosterPath,
                     TrailerUrl = M.TrailerUrl,
                     Reviews = M.Reviews.Select(R => new ReviewGetDto
@@ -65,7 +64,6 @@ namespace Moviemo.Services
                     Id = M.Id,
                     Title = M.Title,
                     Overview = M.Overview,
-                    TmdbScore = M.TmdbScore,
                     PosterPath = M.PosterPath,
                     TrailerUrl = M.TrailerUrl,
                     Reviews = M.Reviews.Select(R => new ReviewGetDto
@@ -97,7 +95,6 @@ namespace Moviemo.Services
             {
                 Title = Dto.Title,
                 Overview = Dto.Overview,
-                TmdbScore = Dto.TmdbScore,
                 PosterPath = Dto.PosterPath,
                 TrailerUrl = Dto.TrailerUrl
             };

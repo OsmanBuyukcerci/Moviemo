@@ -15,8 +15,6 @@ namespace Moviemo.Models
         [Required]
         public required string Overview { get; set; }
 
-        public double TmdbScore { get; set; }
-
         [Required]
         public required string PosterPath { get; set; }
 
