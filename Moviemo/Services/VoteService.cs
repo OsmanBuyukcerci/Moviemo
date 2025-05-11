@@ -93,6 +93,8 @@ namespace Moviemo.Services
 
             _Context.Votes.Remove(Vote);
 
+            await _Context.SaveChangesAsync();
+
             return true;
         }
     }
