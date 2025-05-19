@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
+using Moviemo.Dtos;
 using Moviemo.Dtos.Comment;
 using Moviemo.Dtos.Review;
 using Moviemo.Dtos.Token;
@@ -130,11 +131,27 @@ namespace Moviemo.Services
             return Dto;
         }
 
-        public async Task<bool> UpdateAsync(long Id, UserUpdateDto Dto)
+        public async Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, UserUpdateDto Dto)
         {
+            var ResponseDto = new UpdateResponseDto
+            {
+                IsUpdated = false,
+                Issue = UpdateIssue.None
+            };
+
             var User = await _Context.Users.FindAsync(Id);
 
-            if (User == null) return false;
+            if (User == null)
+            {
+                ResponseDto.Issue = UpdateIssue.NotFound;
+                return ResponseDto;
+            }
+
+            else if (User.Id != UserId)
+            {
+                ResponseDto.Issue = UpdateIssue.Unauthorized;
+                return ResponseDto;
+            }
 
             var DtoProperties = Dto.GetType().GetProperties();
             var UserType = User.GetType();
@@ -153,7 +170,8 @@ namespace Moviemo.Services
                     Dto.Username != null &&
                     await _Context.Users.AnyAsync(U => U.Username == Dto.Username))
                 {
-                    return false;
+                    ResponseDto.Issue = UpdateIssue.SameUsername;
+                    return ResponseDto;
                 }
 
                 if (Property.Name == "Password" && Dto.Password != null)
@@ -168,19 +186,39 @@ namespace Moviemo.Services
 
             await _Context.SaveChangesAsync();
 
-            return true;
+            ResponseDto.IsUpdated = true;
+
+            return ResponseDto;
         }
 
-        public async Task<bool> DeleteAsync(long Id)
+        public async Task<DeleteResponseDto> DeleteAsync(long Id, long UserId)
         {
+            var ResponseDto = new DeleteResponseDto
+            {
+                IsDeleted = false,
+                Issue = DeleteIssue.None
+            };
+
             var User = await _Context.Users.FindAsync(Id);
 
-            if (User == null) return false;
+            if (User == null)
+            {
+                ResponseDto.Issue = DeleteIssue.NotFound;
+                return ResponseDto;
+            }
+
+            else if (User.Id != UserId)
+            {
+                ResponseDto.Issue = DeleteIssue.Unauthorized;
+                return ResponseDto;
+            }
 
             _Context.Users.Remove(User);
             await _Context.SaveChangesAsync();
 
-            return true;
+            ResponseDto.IsDeleted = true;
+
+            return ResponseDto;
         }
 
         public async Task<TokenResponseDto?> LoginAsync(UserLoginDto Dto)

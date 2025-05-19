@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Moviemo.Dtos;
 using Moviemo.Dtos.Vote;
 using Moviemo.Services.Interfaces;
 
@@ -36,6 +39,7 @@ namespace Moviemo.Controllers
         }
 
         // api/votes -> Oy oluştur
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateVote([FromBody] VoteCreateDto Dto)
         {
@@ -45,25 +49,43 @@ namespace Moviemo.Controllers
         }
 
         // api/votes/{Id} -> Rotada belirtilen ID'ye sahip oy bilgisini güncelle
+        [Authorize]
         [HttpPut("{Id}")]
         public async Task<IActionResult> UpdateVote(long Id, VoteUpdateDto Dto)
         {
-            bool IsUpdated = await _VoteService.UpdateAsync(Id, Dto);
+            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            if (!IsUpdated) return BadRequest();
+            var ResponseDto = await _VoteService.UpdateAsync(Id, UserId, Dto);
 
-            return Ok(Dto);
+            if (ResponseDto.IsUpdated) return Ok(Dto);
+
+            else if (ResponseDto.Issue == UpdateIssue.NotFound)
+                return NotFound($"Vote ID'si {Id} olan oy bulunamadı.");
+
+            else if (ResponseDto.Issue == UpdateIssue.Unauthorized)
+                return Unauthorized("Size ait olmayan bir oyu güncelleyemezsiniz.");
+
+            return BadRequest("Oy güncelleme işlemi gerçekleştirilemedi.");
         }
 
         // api/votes/{Id} -> Rotada belirtilen ID'ye sahip oyu sil}
+        [Authorize]
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteVote(long Id)
         {
-            bool IsDeleted = await _VoteService.DeleteAsync(Id);
+            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            if (!IsDeleted) return NotFound();
+            var ResponseDto = await _VoteService.DeleteAsync(Id, UserId);
 
-            return NoContent();
+            if (ResponseDto.IsDeleted) return NoContent();
+
+            else if (ResponseDto.Issue == DeleteIssue.NotFound)
+                return NotFound($"Vote ID'si {Id} olan oy bulunamadı.");
+
+            else if (ResponseDto.Issue == DeleteIssue.Unauthorized)
+                return Unauthorized("Size ait olmayan bir oyu silemezsiniz.");
+
+            return BadRequest("Oy silme işlemi gerçekleştirilemedi.");
         }
     }
 }

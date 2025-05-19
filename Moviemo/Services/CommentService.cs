@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
+using Moviemo.Dtos;
 using Moviemo.Dtos.Comment;
 using Moviemo.Models;
 using Moviemo.Services.Interfaces;
@@ -69,15 +70,33 @@ namespace Moviemo.Services
             return Dto;
         }
 
-        public async Task<bool> UpdateAsync(long Id, CommentUpdateDto Dto)
+        public async Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, CommentUpdateDto Dto)
         {
+            var ResponseDto = new UpdateResponseDto
+            {
+                IsUpdated = false,
+                Issue = UpdateIssue.None
+            };
+
             var Comment = await _Context.Comments.FindAsync(Id);
 
-            if (Comment == null) return false;
+            if (Comment == null)
+            {
+                ResponseDto.Issue = UpdateIssue.NotFound;
+                return ResponseDto;
+            } 
+            
+            else if (Comment.UserId != UserId)
+            {
+                ResponseDto.Issue = UpdateIssue.Unauthorized;
+                return ResponseDto;
+            }
 
             var DtoProperties = Dto.GetType().GetProperties();
             var CommentType = Comment.GetType();
 
+            /* CommentUpdateDto'nun tek propertysi var ancak uygulamanın 
+             * scalable olması için böyle bıraktım */
             foreach (var Property in DtoProperties)
             {
                 var NewValue = Property.GetValue(Dto);
@@ -93,19 +112,38 @@ namespace Moviemo.Services
             
             await _Context.SaveChangesAsync();
 
-            return true;
+            ResponseDto.IsUpdated = true;
+
+            return ResponseDto;
         }
 
-        public async Task<bool> DeleteAsync(long Id)
+        public async Task<DeleteResponseDto> DeleteAsync(long Id, long UserId)
         {
+            var ResponseDto = new DeleteResponseDto { 
+                IsDeleted = false,
+                Issue = DeleteIssue.None
+            };
+
             var Comment = await _Context.Comments.FindAsync(Id);
 
-            if (Comment == null) return false;
+            if (Comment == null)
+            {
+                ResponseDto.Issue = DeleteIssue.NotFound;
+                return ResponseDto;
+            }
+
+            else if (Comment.UserId != UserId)
+            {
+                ResponseDto.Issue = DeleteIssue.Unauthorized;
+                return ResponseDto;
+            }
 
             _Context.Comments.Remove(Comment);
             await _Context.SaveChangesAsync();
 
-            return true;
+            ResponseDto.IsDeleted = true;
+
+            return ResponseDto;
         }
     }
 }

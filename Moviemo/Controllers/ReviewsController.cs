@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Moviemo.Dtos;
 using Moviemo.Dtos.Review;
 using Moviemo.Services.Interfaces;
 
@@ -38,6 +41,7 @@ namespace Moviemo.Controllers
 
         // api/reviews -> İnceleme oluştur
         [HttpPost]
+        [Authorize]
         public async Task<IActionResult> CreateReview([FromBody] ReviewCreateDto Dto)
         {
             ReviewCreateDto ResponseDto = await _ReviewService.CreateAsync(Dto);
@@ -46,25 +50,43 @@ namespace Moviemo.Controllers
         }
 
         // api/reviews/{Id} -> Rotada belirtilen ID'ye sahip incelemeyi güncelle
+        [Authorize]
         [HttpPut("{Id}")]
         public async Task<IActionResult> UpdateReview(long Id, [FromBody] ReviewUpdateDto Dto)
         {
-            bool IsUpdated = await _ReviewService.UpdateAsync(Id, Dto);
+            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            if (!IsUpdated) return BadRequest();
+            var ResponseDto = await _ReviewService.UpdateAsync(Id, UserId, Dto);
 
-            return Ok(Dto);
+            if (ResponseDto.IsUpdated) return Ok(Dto);
+
+            else if (ResponseDto.Issue == UpdateIssue.NotFound)
+                return NotFound($"Review ID'si {Id} olan inceleme bulunamadı.");
+
+            else if (ResponseDto.Issue == UpdateIssue.Unauthorized)
+                return Unauthorized("Size ait olmayan bir incelemeyi güncelleyemezsiniz.");
+
+            return BadRequest("İnceleme güncelleme işlemi gerçekleştirilemedi.");
         }
 
         // api/reviews/{Id} -> Rotada belirtilen ID'ye sahip incelemeyi sil
+        [Authorize]
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteReview(long Id)
         {
-            bool IsDeleted = await _ReviewService.DeleteAsync(Id);
+            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            if (!IsDeleted) return BadRequest();
+            var ResponseDto = await _ReviewService.DeleteAsync(Id, UserId);
 
-            return NoContent();
+            if (ResponseDto.IsDeleted) return NoContent();
+
+            else if (ResponseDto.Issue == DeleteIssue.NotFound)
+                return NotFound($"Review ID'si {Id} olan inceleme bulunamadı.");
+
+            else if (ResponseDto.Issue == DeleteIssue.Unauthorized)
+                return Unauthorized("Size ait olmayan bir incelemeyi silemezsiniz.");
+
+            return BadRequest("İnceleme silme işlemi gerçekleştirilemedi.");
         }
     }
 }

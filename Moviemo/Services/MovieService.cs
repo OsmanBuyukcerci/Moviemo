@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
+using Moviemo.Dtos;
 using Moviemo.Dtos.Comment;
 using Moviemo.Dtos.Movie;
 using Moviemo.Dtos.Review;
@@ -109,11 +110,21 @@ namespace Moviemo.Services
             return Dto;
         }
 
-        public async Task<bool> UpdateAsync(long Id, MovieUpdateDto Dto)
+        public async Task<UpdateResponseDto> UpdateAsync(long Id, MovieUpdateDto Dto)
         {
+            var ResponseDto = new UpdateResponseDto
+            {
+                IsUpdated = false,
+                Issue = UpdateIssue.None
+            };
+
             var Movie = await _Context.Movies.FindAsync(Id);
 
-            if (Movie == null) return false;
+            if (Movie == null)
+            {
+                ResponseDto.Issue = UpdateIssue.NotFound;
+                return ResponseDto;
+            }
 
             var DtoProperties = Dto.GetType().GetProperties();
             var MovieType = Movie.GetType();
@@ -131,19 +142,33 @@ namespace Moviemo.Services
 
             await _Context.SaveChangesAsync();
 
-            return true;
+            ResponseDto.IsUpdated = true;
+
+            return ResponseDto;
         }
 
-        public async Task<bool> DeleteAsync(long Id)
+        public async Task<DeleteResponseDto> DeleteAsync(long Id)
         {
+            var ResponseDto = new DeleteResponseDto 
+            {
+                IsDeleted = false,
+                Issue = DeleteIssue.None
+            };
+
             var Movie = await _Context.Movies.FindAsync(Id);
 
-            if (Movie == null) return false;
+            if (Movie == null)
+            {
+                ResponseDto.Issue = DeleteIssue.NotFound;
+                return ResponseDto;
+            }
 
             _Context.Movies.Remove(Movie);
             await _Context.SaveChangesAsync();
 
-            return true;
+            ResponseDto.IsDeleted = true;
+
+            return ResponseDto;
         }
     }
 }

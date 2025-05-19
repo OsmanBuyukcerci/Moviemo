@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
+using Moviemo.Dtos;
 using Moviemo.Dtos.Vote;
 using Moviemo.Models;
 using Moviemo.Services.Interfaces;
@@ -60,11 +61,27 @@ namespace Moviemo.Services
             return Dto;
         }
 
-        public async Task<bool> UpdateAsync(long Id, VoteUpdateDto Dto)
+        public async Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, VoteUpdateDto Dto)
         {
+            var ResponseDto = new UpdateResponseDto
+            {
+                IsUpdated = false,
+                Issue = UpdateIssue.None
+            };
+
             var Vote = await _Context.Votes.FindAsync(Id);
 
-            if (Vote== null) return false;
+            if (Vote == null)
+            {
+                ResponseDto.Issue = UpdateIssue.NotFound;
+                return ResponseDto;
+            }
+
+            else if (Vote.UserId != UserId)
+            {
+                ResponseDto.Issue = UpdateIssue.Unauthorized;
+                return ResponseDto;
+            }
 
             var DtoProperties = Dto.GetType().GetProperties();
             var VoteType = Vote.GetType();
@@ -82,20 +99,39 @@ namespace Moviemo.Services
 
             await _Context.SaveChangesAsync();
 
-            return true;
+            ResponseDto.IsUpdated = true;
+
+            return ResponseDto;
         }
 
-        public async Task<bool> DeleteAsync(long Id)
+        public async Task<DeleteResponseDto> DeleteAsync(long Id, long UserId)
         {
+            var ResponseDto = new DeleteResponseDto
+            {
+                IsDeleted = false,
+                Issue = DeleteIssue.None
+            };
+
             var Vote = await _Context.Votes.FindAsync(Id);
 
-            if (Vote == null) return false;
+            if (Vote == null)
+            {
+                ResponseDto.Issue = DeleteIssue.NotFound;
+                return ResponseDto;
+            }
+
+            else if (Vote.UserId != UserId)
+            {
+                ResponseDto.Issue = DeleteIssue.Unauthorized;
+            }
 
             _Context.Votes.Remove(Vote);
 
             await _Context.SaveChangesAsync();
 
-            return true;
+            ResponseDto.IsDeleted = true;
+
+            return ResponseDto;
         }
     }
 }

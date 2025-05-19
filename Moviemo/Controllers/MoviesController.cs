@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Moviemo.Dtos;
 using Moviemo.Dtos.Movie;
 using Moviemo.Services.Interfaces;
 
@@ -37,6 +39,7 @@ namespace Moviemo.Controllers
         }
 
         // api/movies -> Film oluştur
+        [Authorize(Roles = "Admin,Manager")]
         [HttpPost]
         public async Task<IActionResult> CreateMovie(MovieCreateDto Dto)
         {
@@ -46,25 +49,33 @@ namespace Moviemo.Controllers
         }
 
         // api/movies/{Id} -> Rotada belirtilen ID'ye sahip filmi güncelle
+        [Authorize(Roles = "Admin,Manager")]
         [HttpPut("{Id}")]
         public async Task<IActionResult> UpdateMovie(long Id, MovieUpdateDto Dto)
         {
-            bool IsUpdated = await _MovieService.UpdateAsync(Id, Dto);
+            var ResponseDto = await _MovieService.UpdateAsync(Id, Dto);
 
-            if (!IsUpdated) return BadRequest();
+            if (ResponseDto.IsUpdated) return Ok(Dto);
 
-            return Ok(Dto);
+            else if (ResponseDto.Issue == UpdateIssue.NotFound) 
+                return NotFound($"Movie ID'si {Id} olan film bulunamadı.");
+
+            return BadRequest("Film güncelleştirme işlemi gerçekleştirilemedi.");
         }
 
         // api/movies/{Id} -> Rotada belirtilen ID'ye sahip filmi sil
+        [Authorize(Roles = "Admin,Manager")]
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteMovie(long Id)
         {
-            bool IsDeleted = await _MovieService.DeleteAsync(Id);
+            var ResponseDto = await _MovieService.DeleteAsync(Id);
 
-            if (!IsDeleted) return NotFound();
+            if (ResponseDto.IsDeleted) return NoContent();
 
-            return NoContent();
+            else if (ResponseDto.Issue == DeleteIssue.NotFound)
+                return NotFound($"Movie ID'si {Id} olan film bulunamadı");
+
+            return BadRequest("Film silme işlemi gerçekleştirilemedi.");
         }
     }
 }

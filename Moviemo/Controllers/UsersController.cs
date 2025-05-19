@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Moviemo.Dtos;
 using Moviemo.Dtos.Token;
 using Moviemo.Dtos.User;
 using Moviemo.Services.Interfaces;
@@ -49,25 +52,46 @@ namespace Moviemo.Controllers
         }
 
         // api/users/{Id} -> Rotada belirtilen ID'ye sahip kullanıcıyı güncelle
+        [Authorize]
         [HttpPut("{Id}")]
         public async Task<IActionResult> UpdateUser(long Id, [FromBody] UserUpdateDto Dto)
         {
-            bool IsUpdated = await _UserService.UpdateAsync(Id, Dto);
+            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            if (!IsUpdated) return BadRequest();
+            var ResponseDto = await _UserService.UpdateAsync(Id, UserId, Dto);
 
-            return Ok(Dto);
+            if (ResponseDto.IsUpdated) Ok(Dto);
+
+            else if (ResponseDto.Issue == UpdateIssue.NotFound)
+                return NotFound($"User ID'si {Id} olan kullanıcı bulunamadı.");
+
+            else if (ResponseDto.Issue == UpdateIssue.Unauthorized)
+                return Unauthorized("Başka bir kullanıcının bilgilerini güncelleyemezsiniz.");
+
+            else if (ResponseDto.Issue == UpdateIssue.SameUsername)
+                return BadRequest("Kullanıcı adı kullanımda.");
+
+            return BadRequest("Kullanıcı güncelleme işlemi gerçekleştirilemedi.");
         }
 
         // api/users/{Id} -> Rotada belirtilen ID'ye sahip kullanıcıyı sil
+        [Authorize]
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteUser(long Id)
         {
-            bool IsDeleted = await _UserService.DeleteAsync(Id);
-            
-            if (!IsDeleted) return NotFound();
+            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            return NoContent();
+            var ResponseDto = await _UserService.DeleteAsync(Id, UserId);
+
+            if (ResponseDto.IsDeleted) return NoContent();
+
+            else if (ResponseDto.Issue == DeleteIssue.NotFound)
+                return NotFound($"User ID'si {Id} olan kullanıcı bulunamadı.");
+
+            else if (ResponseDto.Issue == DeleteIssue.Unauthorized)
+                return Unauthorized("Size ait olmayan bir kullanıcı hesabını silemezsiniz.");
+
+            return BadRequest("Kullanıcı silme işlemi gerçekleştirilemedi.");
         }
 
         // api/users/login -> Kullanıcı hesabına giriş yap

@@ -1,4 +1,5 @@
-﻿using Moviemo.Dtos.Report;
+﻿using Moviemo.Dtos;
+using Moviemo.Dtos.Report;
 using Moviemo.Models;
 
 namespace Moviemo.Services.Interfaces
@@ -8,7 +9,7 @@ namespace Moviemo.Services.Interfaces
         Task<List<ReportGetDto>> GetAllAsync();
         Task<ReportGetDto?> GetByIdAsync(long Id);
         Task<ReportCreateDto> CreateAsync(ReportCreateDto Dto);
-        Task<bool> UpdateAsync(long Id, ReportUpdateDto Dto);
-        Task<bool> DeleteAsync(long Id);
+        Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, ReportUpdateDto Dto);
+        Task<DeleteResponseDto> DeleteAsync(long Id, long UserId);
     }
 }

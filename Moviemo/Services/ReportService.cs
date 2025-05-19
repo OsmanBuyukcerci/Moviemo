@@ -1,6 +1,7 @@
 ﻿using System.Reflection.Metadata.Ecma335;
 using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
+using Moviemo.Dtos;
 using Moviemo.Dtos.Report;
 using Moviemo.Models;
 using Moviemo.Services.Interfaces;
@@ -61,11 +62,27 @@ namespace Moviemo.Services
             return Dto;
         }
 
-        public async Task<bool> UpdateAsync(long Id, ReportUpdateDto Dto)
+        public async Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, ReportUpdateDto Dto)
         {
+            var ResponseDto = new UpdateResponseDto
+            {
+                IsUpdated = false,
+                Issue = UpdateIssue.None
+            };
+
             var Report = await _Context.Reports.FindAsync(Id);
 
-            if (Report == null) return false;
+            if (Report == null)
+            {
+                ResponseDto.Issue = UpdateIssue.NotFound;
+                return ResponseDto;
+            }
+
+            else if (Report.UserId != UserId)
+            {
+                ResponseDto.Issue = UpdateIssue.Unauthorized;
+                return ResponseDto;
+            }
 
             var DtoProperties = Dto.GetType().GetProperties();
             var ReportType = Report.GetType();
@@ -83,19 +100,39 @@ namespace Moviemo.Services
 
             await _Context.SaveChangesAsync();
 
-            return true;
+            ResponseDto.IsUpdated = true;
+
+            return ResponseDto;
         }
 
-        public async Task<bool> DeleteAsync(long Id)
+        public async Task<DeleteResponseDto> DeleteAsync(long Id, long UserId)
         {
+            var ResponseDto = new DeleteResponseDto
+            {
+                IsDeleted = false,
+                Issue = DeleteIssue.None
+            };
+
             var Report = await _Context.Reports.FindAsync(Id);
 
-            if (Report == null) return false;
+            if (Report == null)
+            {
+                ResponseDto.Issue = DeleteIssue.NotFound;
+                return ResponseDto;
+            } 
+            
+            else if (Report.UserId != UserId)
+            {
+                ResponseDto.Issue = DeleteIssue.Unauthorized;
+                return ResponseDto;
+            }
 
             _Context.Reports.Remove(Report);
             await _Context.SaveChangesAsync();
 
-            return true;
+            ResponseDto.IsDeleted = true;
+
+            return ResponseDto;
         }
     }
 }

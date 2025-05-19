@@ -1,4 +1,5 @@
-﻿using Moviemo.Dtos.Token;
+﻿using Moviemo.Dtos;
+using Moviemo.Dtos.Token;
 using Moviemo.Dtos.User;
 using Moviemo.Models;
 
@@ -9,8 +10,8 @@ namespace Moviemo.Services.Interfaces
         Task<List<UserGetDto>> GetAllAsync();
         Task<UserGetDto?> GetByIdAsync(long Id);
         Task<UserCreateDto?> CreateAsync(UserCreateDto Dto);
-        Task<bool> UpdateAsync(long Id, UserUpdateDto Dto);
-        Task<bool> DeleteAsync(long Id);
+        Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, UserUpdateDto Dto);
+        Task<DeleteResponseDto> DeleteAsync(long Id, long UserId);
         Task<TokenResponseDto?> LoginAsync(UserLoginDto Dto);
         Task<TokenResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto Dto);
     }

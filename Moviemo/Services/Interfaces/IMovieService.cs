@@ -1,4 +1,5 @@
-﻿using Moviemo.Dtos.Movie;
+﻿using Moviemo.Dtos;
+using Moviemo.Dtos.Movie;
 using Moviemo.Models;
 
 namespace Moviemo.Services.Interfaces
@@ -8,7 +9,7 @@ namespace Moviemo.Services.Interfaces
         Task<List<MovieGetDto>> GetAllAsync();
         Task<MovieGetDto?> GetByIdAsync(long Id);
         Task<MovieCreateDto> CreateAsync(MovieCreateDto Dto);
-        Task<bool> UpdateAsync(long Id, MovieUpdateDto Dto);
-        Task<bool> DeleteAsync(long Id);
+        Task<UpdateResponseDto> UpdateAsync(long Id, MovieUpdateDto Dto);
+        Task<DeleteResponseDto> DeleteAsync(long Id);
     }
 }
