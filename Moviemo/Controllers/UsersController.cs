@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Moviemo.Dtos.Token;
 using Moviemo.Dtos.User;
 using Moviemo.Services.Interfaces;
 
@@ -78,6 +79,18 @@ namespace Moviemo.Controllers
             if (Response == null) return BadRequest("Kullanıcı adı veya parola hatalı");
 
             return Ok(Response);
+        }
+
+        // api/users/refresh-token -> Kullanıcının access ve refresh tokenlerini yenile
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto Dto)
+        {
+            var Result = await _UserService.RefreshTokenAsync(Dto);
+
+            if (Result == null || Result.AccessToken == null || Result.RefreshToken == null) 
+                return Unauthorized("Geçersiz refresh token");
+
+            return Ok(Result);
         }
     }
 }

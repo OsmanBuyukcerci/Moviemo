@@ -32,6 +32,8 @@ namespace Moviemo.Models
         public ICollection<Report> Reports { get; set; }
         public ICollection<Review> Reviews { get; set; }
         public ICollection<Vote> Votes { get; set; }
+        public string? RefreshToken {  get; set; }
+        public DateTime? RefreshTokenExpiryTime { get; set; }
     }
 
     public enum UserRole

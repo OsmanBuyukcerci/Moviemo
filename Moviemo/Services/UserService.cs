@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
 using Moviemo.Dtos.Comment;
 using Moviemo.Dtos.Review;
+using Moviemo.Dtos.Token;
 using Moviemo.Dtos.User;
 using Moviemo.Models;
 using Moviemo.Services.Interfaces;
@@ -144,7 +145,23 @@ namespace Moviemo.Services
                 if (NewValue == null) continue;
 
                 var TargetProperty = UserType.GetProperty(Property.Name);
+
                 if (TargetProperty == null || !TargetProperty.CanWrite) continue;
+
+                if (Property.Name == "Username" && 
+                    User.Username != Dto.Username &&
+                    Dto.Username != null &&
+                    await _Context.Users.AnyAsync(U => U.Username == Dto.Username))
+                {
+                    return false;
+                }
+
+                if (Property.Name == "Password" && Dto.Password != null)
+                {
+                    NewValue = new PasswordHasher<User>()
+                        .HashPassword(User, Dto.Password);
+                }
+
 
                 TargetProperty.SetValue(User, NewValue);
             }
@@ -166,7 +183,7 @@ namespace Moviemo.Services
             return true;
         }
 
-        public async Task<string?> LoginAsync(UserLoginDto Dto)
+        public async Task<TokenResponseDto?> LoginAsync(UserLoginDto Dto)
         {
             var User = await _Context.Users.FirstOrDefaultAsync(U => U.Username == Dto.Username);
 
@@ -178,11 +195,13 @@ namespace Moviemo.Services
                 return null;
             }
 
-            string Token = _TokenService.CreateToken(User);
+            return await _TokenService.CreateTokenResponseAsync(User);
+        }
 
-            if (Token == null) return null;
-
-            return Token;
+        public async Task<TokenResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto Dto)
+        {
+            var Result = await _TokenService.RefreshTokensAsync(Dto);
+            return Result;
         }
     }
 }
