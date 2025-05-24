@@ -69,12 +69,19 @@ namespace Moviemo.Services
             }
         }
 
-        public async Task<VoteCreateDto?> CreateAsync(VoteCreateDto Dto, long UserId)
+        public async Task<CreateResponseDto?> CreateAsync(VoteCreateDto Dto, long UserId)
         {
             _Logger.LogInformation("Yeni oy oluşturuluyor: {@VoteCreateDto}", Dto);
 
             try
             {
+                var User = await _Context.Users.Include(U => U.Votes).FirstOrDefaultAsync(U => U.Id == UserId);
+
+                bool HasVoted = User!.Votes.Any(V => V.CommentId == Dto.CommentId);
+
+                if (HasVoted)
+                    return new CreateResponseDto { Issue = CreateIssue.SameContent };
+
                 var Vote = new Vote
                 {
                     UserId = UserId,
@@ -85,7 +92,7 @@ namespace Moviemo.Services
                 await _Context.Votes.AddAsync(Vote);
                 await _Context.SaveChangesAsync();
 
-                return Dto;
+                return new CreateResponseDto { IsCreated = true };
             }
             catch (Exception Ex)
             {

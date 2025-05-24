@@ -49,12 +49,19 @@ namespace Moviemo.Controllers
             if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
                 return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
-            var Vote = await _VoteService.CreateAsync(Dto, UserId);
+            var ResponseDto = await _VoteService.CreateAsync(Dto, UserId);
 
-            if (Vote == null)
+            if (ResponseDto == null)
                 return StatusCode(500, "Oy oluşturulurken bir sunucu hatası meydana geldi.");
 
-            return Ok(Dto);
+            if (ResponseDto.IsCreated == true)
+                return Ok(Dto);
+
+            return ResponseDto.Issue switch
+            {
+                CreateIssue.SameContent => Conflict("Aynı yoruma birden fazla oy atamazsınız."),
+                _ => BadRequest("Oy oluşturma işlemi gerçekleştirilemedi.")
+            };
         }
 
         // api/votes/{Id} -> Rotada belirtilen ID'ye sahip oy bilgisini güncelle
