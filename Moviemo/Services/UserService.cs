@@ -260,11 +260,13 @@ namespace Moviemo.Services
                     return new LoginResponseDto { Issue = LoginIssue.IncorrectPassword};
                 }
 
-                var Tokens = await _TokenService.CreateTokenResponseAsync(User);
-
                 _Logger.LogInformation("Kullanıcı {Username } başarıyla giriş yaptı.", Dto.Username);
 
-                return new LoginResponseDto { IsLoggedIn = true };
+                return new LoginResponseDto 
+                { 
+                    IsLoggedIn = true , 
+                    TokenResponse = await _TokenService.CreateTokenResponseAsync(User) 
+                };
             }
             catch (Exception Ex)
             {
