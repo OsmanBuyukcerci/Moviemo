@@ -11,53 +11,70 @@ namespace Moviemo.Services
 {
     public class MovieService : IMovieService
     {
+        private readonly ILogger<MovieService> _Logger;
+
         private readonly AppDbContext _Context;
 
-        public MovieService(AppDbContext Context)
+        public MovieService(AppDbContext Context, ILogger<MovieService> Logger)
         {
+            _Logger = Logger;
             _Context = Context;
         }
 
-        public async Task<List<MovieGetDto>> GetAllAsync()
+        public async Task<List<MovieGetDto>?> GetAllAsync()
         {
-            return await _Context.Movies
-                .Include(M => M.Comments)
-                .ThenInclude(C => C.User)
-                .Select(M => new MovieGetDto 
-                {
-                    Id = M.Id,
-                    Title = M.Title,
-                    Overview = M.Overview,
-                    PosterPath = M.PosterPath,
-                    TrailerUrl = M.TrailerUrl,
-                    Reviews = M.Reviews.Select(R => new ReviewGetDto
+            _Logger.LogInformation("Tüm film bilgileri alınıyor...");
+
+            try
+            {
+                return await _Context.Movies
+                    .Include(M => M.Comments)
+                    .ThenInclude(C => C.User)
+                    .Select(M => new MovieGetDto
                     {
-                        Id = R.Id,
-                        Body = R.Body,
-                        UserId = R.User.Id,
-                        MovieId = M.Id,
-                        UserScore = R.UserScore,
-                        CreatedAt = R.CreatedAt,
-                        UpdatedAt = R.CreatedAt,
-                    }).ToList(),
-                    Comments = M.Comments.Select(C => new CommentGetDto
-                    {
-                        Id = C.Id,
-                        Body = C.Body,
-                        UserId = C.UserId,
-                        MovieId = M.Id,
-                        CreatedAt = C.CreatedAt,
-                        UpdatedAt = C.CreatedAt,
-                        DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
-                        UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
-                    }).ToList()
-                })
-                .ToListAsync();
+                        Id = M.Id,
+                        Title = M.Title,
+                        Overview = M.Overview,
+                        PosterPath = M.PosterPath,
+                        TrailerUrl = M.TrailerUrl,
+                        Reviews = M.Reviews.Select(R => new ReviewGetDto
+                        {
+                            Id = R.Id,
+                            Body = R.Body,
+                            UserId = R.User.Id,
+                            MovieId = M.Id,
+                            UserScore = R.UserScore,
+                            CreatedAt = R.CreatedAt,
+                            UpdatedAt = R.CreatedAt,
+                        }).ToList(),
+                        Comments = M.Comments.Select(C => new CommentGetDto
+                        {
+                            Id = C.Id,
+                            Body = C.Body,
+                            UserId = C.UserId,
+                            MovieId = M.Id,
+                            CreatedAt = C.CreatedAt,
+                            UpdatedAt = C.CreatedAt,
+                            DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
+                            UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
+                        }).ToList()
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Tüm film bilgileri alınırken bir hata meydana geldi.");
+                return null;
+            };
         }
 
         public async Task<MovieGetDto?> GetByIdAsync(long Id)
         {
-            return await _Context.Movies
+            _Logger.LogInformation("Movie ID'si {Id} olan film bilgisi alınıyor...", Id);
+
+            try
+            {
+                return await _Context.Movies
                 .Include(M => M.Comments)
                 .ThenInclude(C => C.User)
                 .Include(M => M.Reviews)
@@ -86,89 +103,109 @@ namespace Moviemo.Services
                         UserId = C.UserId,
                         MovieId = M.Id,
                         CreatedAt = C.CreatedAt,
-                        UpdatedAt= C.UpdatedAt,
+                        UpdatedAt = C.UpdatedAt,
                         DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
                         UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
                     }).ToList()
                 })
                 .FirstOrDefaultAsync(M => M.Id == Id);
+            } catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Film bilgisi alınırken bir hata meydana geldi.");
+                return null;
+            }
         }
 
-        public async Task<MovieCreateDto> CreateAsync(MovieCreateDto Dto)
+        public async Task<MovieCreateDto?> CreateAsync(MovieCreateDto Dto)
         {
-            var Movie = new Movie
+            _Logger.LogInformation("Yeni film oluşturuluyor: {@MovieCreateDto}", Dto);
+
+            try
             {
-                Title = Dto.Title,
-                Overview = Dto.Overview,
-                PosterPath = Dto.PosterPath,
-                TrailerUrl = Dto.TrailerUrl
-            };
+                var Movie = new Movie
+                {
+                    Title = Dto.Title,
+                    Overview = Dto.Overview,
+                    PosterPath = Dto.PosterPath,
+                    TrailerUrl = Dto.TrailerUrl
+                };
 
-            await _Context.Movies.AddAsync(Movie);
-            await _Context.SaveChangesAsync();
+                await _Context.Movies.AddAsync(Movie);
+                await _Context.SaveChangesAsync();
 
-            return Dto;
+                _Logger.LogInformation("Film başarıyla oluşturuldu.");
+
+                return Dto;
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Film oluşturulurken bir hata meydana geldi.");
+                return null;
+            }
         }
 
-        public async Task<UpdateResponseDto> UpdateAsync(long Id, MovieUpdateDto Dto)
+        public async Task<UpdateResponseDto?> UpdateAsync(long Id, MovieUpdateDto Dto)
         {
-            var ResponseDto = new UpdateResponseDto
-            {
-                IsUpdated = false,
-                Issue = UpdateIssue.None
-            };
+            _Logger.LogInformation("Movie ID'si {Id} olan film güncelleniyor: {@MovieUpdateDto}", Id, Dto);
 
-            var Movie = await _Context.Movies.FindAsync(Id);
-
-            if (Movie == null)
+            try
             {
-                ResponseDto.Issue = UpdateIssue.NotFound;
-                return ResponseDto;
+                var Movie = await _Context.Movies.FindAsync(Id);
+
+                if (Movie == null)
+                    return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
+
+                var DtoProperties = Dto.GetType().GetProperties();
+                var MovieType = Movie.GetType();
+
+                foreach (var Property in DtoProperties)
+                {
+                    var NewValue = Property.GetValue(Dto);
+                    if (NewValue == null) continue;
+
+                    var TargetProperty = MovieType.GetProperty(Property.Name);
+                    if (TargetProperty == null || !TargetProperty.CanWrite) continue;
+
+                    TargetProperty.SetValue(Movie, NewValue);
+                }
+
+                await _Context.SaveChangesAsync();
+
+
+                _Logger.LogInformation("Movie ID'si {Id} olan film başarıyla güncellendi.", Id);
+
+                return new UpdateResponseDto { IsUpdated = true };
             }
-
-            var DtoProperties = Dto.GetType().GetProperties();
-            var MovieType = Movie.GetType();
-
-            foreach (var Property in DtoProperties)
+            catch (Exception Ex)
             {
-                var NewValue = Property.GetValue(Dto);
-                if (NewValue == null) continue;
-
-                var TargetProperty = MovieType.GetProperty(Property.Name);
-                if (TargetProperty == null || !TargetProperty.CanWrite) continue;
-
-                TargetProperty.SetValue(Movie, NewValue);
+                _Logger.LogError(Ex, "Film güncellenirken bir hata meydana geldi.");
+                return null;
             }
-
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsUpdated = true;
-
-            return ResponseDto;
         }
 
-        public async Task<DeleteResponseDto> DeleteAsync(long Id)
+        public async Task<DeleteResponseDto?> DeleteAsync(long Id)
         {
-            var ResponseDto = new DeleteResponseDto 
-            {
-                IsDeleted = false,
-                Issue = DeleteIssue.None
-            };
+            _Logger.LogInformation("Movie ID'si {Id} olan yorum siliniyor...", Id);
 
-            var Movie = await _Context.Movies.FindAsync(Id);
-
-            if (Movie == null)
+            try
             {
-                ResponseDto.Issue = DeleteIssue.NotFound;
-                return ResponseDto;
+                var Movie = await _Context.Movies.FindAsync(Id);
+
+                if (Movie == null)
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
+
+                _Context.Movies.Remove(Movie);
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("Movie ID'si {Id} olan film başarıyla silindi.", Id);
+
+                return new DeleteResponseDto { IsDeleted = true };
             }
-
-            _Context.Movies.Remove(Movie);
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsDeleted = true;
-
-            return ResponseDto;
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Film silinirken bir hata meydana geldi.");
+                return null;
+            }
         }
     }
 }

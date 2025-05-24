@@ -6,8 +6,6 @@ namespace Moviemo.Dtos.Comment
     {
         public required string Body { get; set; }
 
-        public required long UserId { get; set; }
-
         public required long MovieId { get; set; }
     }
 }

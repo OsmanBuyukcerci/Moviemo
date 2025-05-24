@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Moviemo.Dtos;
 using Moviemo.Dtos.Token;
@@ -26,6 +27,9 @@ namespace Moviemo.Controllers
         {
             var Users = await _UserService.GetAllAsync();
 
+            if (Users == null)
+                return StatusCode(500, "Tüm kullanıcı bilgileri alınırken bir sunucu hatası meydana geldi.");
+
             return Ok(Users);
         }
 
@@ -44,11 +48,19 @@ namespace Moviemo.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateUser([FromBody] UserCreateDto Dto)
         {
-            var User = await _UserService.CreateAsync(Dto);
+            var ResponseDto = await _UserService.CreateAsync(Dto);
 
-            if (User == null) return BadRequest("Kullanıcı adı kullanımda");
+            if (ResponseDto == null) 
+                return StatusCode(500, "Kullanıcı oluşturulurken bir sunucu hatası meydana geldi.");
 
-            return Ok(User);
+            if (ResponseDto.IsCreated)
+                return Ok(Dto);
+
+            return ResponseDto.Issue switch
+            {
+                CreateIssue.SameContent => BadRequest("Kullanıcı adı kullanımda."),
+                _ => BadRequest("Kullanıcı oluşturma işlemi gerçekleştirilemedi.")
+            };
         }
 
         // api/users/{Id} -> Rotada belirtilen ID'ye sahip kullanıcıyı güncelle
@@ -56,22 +68,22 @@ namespace Moviemo.Controllers
         [HttpPut("{Id}")]
         public async Task<IActionResult> UpdateUser(long Id, [FromBody] UserUpdateDto Dto)
         {
-            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
             var ResponseDto = await _UserService.UpdateAsync(Id, UserId, Dto);
 
+            if (ResponseDto == null)
+                return StatusCode(500, "Kullanıcı güncellenirken bir sunucu hatası meydana geldi.");
+
             if (ResponseDto.IsUpdated) Ok(Dto);
 
-            else if (ResponseDto.Issue == UpdateIssue.NotFound)
-                return NotFound($"User ID'si {Id} olan kullanıcı bulunamadı.");
-
-            else if (ResponseDto.Issue == UpdateIssue.Unauthorized)
-                return Unauthorized("Başka bir kullanıcının bilgilerini güncelleyemezsiniz.");
-
-            else if (ResponseDto.Issue == UpdateIssue.SameUsername)
-                return BadRequest("Kullanıcı adı kullanımda.");
-
-            return BadRequest("Kullanıcı güncelleme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            { 
+                UpdateIssue.NotFound => NotFound($"User ID'si {Id} olan kullanıcı bulunamadı."),
+                UpdateIssue.SameContent => BadRequest("Kullanıcı adı kullanımda."),
+                _ => BadRequest("Kullanıcı güncelleme işlemi gerçekleştirilemedi.")
+            };
         }
 
         // api/users/{Id} -> Rotada belirtilen ID'ye sahip kullanıcıyı sil
@@ -79,39 +91,56 @@ namespace Moviemo.Controllers
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteUser(long Id)
         {
-            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
             var ResponseDto = await _UserService.DeleteAsync(Id, UserId);
 
+            if (ResponseDto == null)
+                return StatusCode(500, "Kullanıcı silinirken bir sunucu hatası meydana geldi.");
+
             if (ResponseDto.IsDeleted) return NoContent();
 
-            else if (ResponseDto.Issue == DeleteIssue.NotFound)
-                return NotFound($"User ID'si {Id} olan kullanıcı bulunamadı.");
-
-            else if (ResponseDto.Issue == DeleteIssue.Unauthorized)
-                return Unauthorized("Size ait olmayan bir kullanıcı hesabını silemezsiniz.");
-
-            return BadRequest("Kullanıcı silme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            { 
+                DeleteIssue.NotFound => NotFound($"User ID'si {Id} olan kullanıcı bulunamadı."),
+                _ => BadRequest("Kullanıcı silme işlemi gerçekleştirilemedi.")
+            };
         }
 
         // api/users/login -> Kullanıcı hesabına giriş yap
         [HttpPost("login")]
         public async Task<IActionResult> LoginUser([FromBody] UserLoginDto Dto)
         {
-            var Response = await _UserService.LoginAsync(Dto);
+            var ResponseDto = await _UserService.LoginAsync(Dto);
 
-            if (Response == null) return BadRequest("Kullanıcı adı veya parola hatalı");
+            if (ResponseDto == null) 
+                return StatusCode(500, "Kullanıcı girişi sırasında bir sunucu hatası meydana geldi.");
 
-            return Ok(Response);
+            if (ResponseDto.Issue == LoginIssue.None)
+                return Ok(Dto);
+
+            return ResponseDto.Issue switch
+            {
+                LoginIssue.NotFound => NotFound("Girilen kullanıcı adına sahip bir hesap bulunamadı."),
+                LoginIssue.IncorrectPassword => BadRequest("Parola hatalı."),
+                _ => BadRequest("Kullanıcı girişi gerçekleştirilemedi.")
+            };
         }
 
         // api/users/refresh-token -> Kullanıcının access ve refresh tokenlerini yenile
         [HttpPost("refresh-token")]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequestDto Dto)
+        public async Task<IActionResult> RefreshTokens([FromBody] RefreshTokenRequestDto Dto)
         {
-            var Result = await _UserService.RefreshTokenAsync(Dto);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
-            if (Result == null || Result.AccessToken == null || Result.RefreshToken == null) 
+            var Result = await _UserService.RefreshTokensAsync(UserId, Dto);
+
+            if (Result == null)
+                return StatusCode(500, "Token yenilenirken bir sunucu hatası meydana geldi.");
+
+            if (Result.AccessToken == null || Result.RefreshToken == null) 
                 return Unauthorized("Geçersiz refresh token");
 
             return Ok(Result);

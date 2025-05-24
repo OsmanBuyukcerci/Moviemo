@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
 using Moviemo.Dtos;
 using Moviemo.Dtos.Review;
@@ -10,15 +9,22 @@ namespace Moviemo.Services
 {
     public class ReviewService : IReviewService
     {
+        private readonly ILogger<ReviewService> _Logger;
+
         private readonly AppDbContext _Context;
 
-        public ReviewService(AppDbContext Context)
+        public ReviewService(AppDbContext Context, ILogger<ReviewService> Logger)
         {
+            _Logger = Logger;
             _Context = Context;
         }
-        public async Task<List<ReviewGetDto>> GetAllAsync()
+        public async Task<List<ReviewGetDto>?> GetAllAsync()
         {
-            return await _Context.Reviews
+            _Logger.LogInformation("Tüm inceleme bilgileri alınıyor...");
+
+            try
+            {
+                return await _Context.Reviews
                 .Include(R => R.User)
                 .Include(R => R.Movie)
                 .Select(R => new ReviewGetDto
@@ -32,11 +38,21 @@ namespace Moviemo.Services
                     UpdatedAt = R.UpdatedAt,
                 })
                 .ToListAsync();
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Tüm inceleme bilgileri alınırken bir hata meydana geldi."); ;
+                return null;
+            }
         }
 
         public async Task<ReviewGetDto?> GetByIdAsync(long Id)
         {
-            return await _Context.Reviews
+            _Logger.LogInformation("Review ID'si {Id} olan inceleme bilgisi alınıyor.", Id);
+
+            try
+            {
+                return await _Context.Reviews
                 .Include(R => R.User)
                 .Include(R => R.Movie)
                 .Select(R => new ReviewGetDto
@@ -49,96 +65,107 @@ namespace Moviemo.Services
                     CreatedAt = R.CreatedAt,
                     UpdatedAt = R.UpdatedAt
                 }).FirstOrDefaultAsync(R => R.Id == Id);
-        }
-
-        public async Task<ReviewCreateDto> CreateAsync(ReviewCreateDto Dto)
-        {
-            var Review = new Review 
-            {
-                Body = Dto.Body,
-                UserId = Dto.UserId,
-                MovieId = Dto.MovieId,
-                UserScore = Dto.UserScore
-            };
-
-            await _Context.Reviews.AddAsync(Review); 
-            await _Context.SaveChangesAsync();
-
-            return Dto;
-        }
-
-        public async Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, ReviewUpdateDto Dto)
-        {
-            var ResponseDto = new UpdateResponseDto 
-            {
-                IsUpdated = false,
-                Issue = UpdateIssue.None
-            };
-
-            var Review = await _Context.Reviews.FindAsync(Id);
-
-            if (Review == null)
-            {
-                ResponseDto.Issue = UpdateIssue.NotFound;
-                return ResponseDto;
             }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "İnceleme bilgisi alınırken bir hata meydana geldi.");
+                return null;
+            }
+        }
+
+        public async Task<ReviewCreateDto?> CreateAsync(ReviewCreateDto Dto, long UserId)
+        {
+            _Logger.LogInformation("Yeni inceleme oluşturuluyor: {@ReviewCreateDto}", Dto);
+
+            try
+            {
+                var Review = new Review
+                {
+                    Body = Dto.Body,
+                    UserId = UserId,
+                    MovieId = Dto.MovieId,
+                    UserScore = Dto.UserScore
+                };
+
+                await _Context.Reviews.AddAsync(Review);
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("İnceleme başarıyla oluşturuldu.");
+
+                return Dto;
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "İnceleme oluşturulurken bir hata meydana geldi.");
+                return null;
+            }
+
             
-            else if (Review.UserId != UserId)
-            {
-                ResponseDto.Issue = UpdateIssue.Unauthorized;
-                return ResponseDto;
-            }
-
-            var DtoProperties = Dto.GetType().GetProperties();
-            var ReviewType = Review.GetType();
-
-            foreach (var Property in DtoProperties)
-            {
-                var NewValue = Property.GetValue(Dto);
-                if (NewValue == null) continue;
-
-                var TargetProperty = ReviewType.GetProperty(Property.Name);
-                if (TargetProperty == null || !TargetProperty.CanWrite) continue;
-
-                TargetProperty.SetValue(Review, NewValue);
-            }
-
-            Review.UpdatedAt = DateTime.UtcNow;
-
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsUpdated = true;
-
-            return ResponseDto;
         }
 
-        public async Task<DeleteResponseDto> DeleteAsync(long Id, long UserId)
+        public async Task<UpdateResponseDto?> UpdateAsync(long Id, long UserId, ReviewUpdateDto Dto)
         {
-            var ResponseDto = new DeleteResponseDto
-            {
-                IsDeleted = false,
-                Issue = DeleteIssue.None
-            };
+            _Logger.LogInformation("Review ID'si {Id} olan inceleme güncelleniyor: {@ReviewUpdateDto}", Id, Dto);
 
-            var Review = await _Context.Reviews.FindAsync(Id);
-
-            if (Review == null)
+            try
             {
-                ResponseDto.Issue = DeleteIssue.NotFound;
-                return ResponseDto;
+                var Review = await _Context.Reviews.FindAsync(Id);
+
+                if (Review == null)
+                    return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
+
+                var DtoProperties = Dto.GetType().GetProperties();
+                var ReviewType = Review.GetType();
+
+                foreach (var Property in DtoProperties)
+                {
+                    var NewValue = Property.GetValue(Dto);
+                    if (NewValue == null) continue;
+
+                    var TargetProperty = ReviewType.GetProperty(Property.Name);
+                    if (TargetProperty == null || !TargetProperty.CanWrite) continue;
+
+                    TargetProperty.SetValue(Review, NewValue);
+                }
+
+                Review.UpdatedAt = DateTime.UtcNow;
+
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("Review ID'si {Id} olan inceleme başarıyla güncellendi.", Id);
+
+                return new UpdateResponseDto { IsUpdated = true };
             }
-
-            else if (Review.UserId != UserId)
+            catch (Exception Ex)
             {
-                ResponseDto.Issue = DeleteIssue.Unauthorized;
+                _Logger.LogError(Ex, "İnceleme güncellenirken bir hata meydana geldi.");
+                return null;
             }
+        }
 
-            _Context.Reviews.Remove(Review);
-            await _Context.SaveChangesAsync();
+        public async Task<DeleteResponseDto?> DeleteAsync(long Id, long UserId)
+        {
+            _Logger.LogInformation("Review ID'si {Id} olan inceleme siliniyor...", Id);
 
-            ResponseDto.IsDeleted = true;
+            try
+            {
+                var Review = await _Context.Reviews.FindAsync(Id);
 
-            return ResponseDto;
+                if (Review == null)
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
+
+                _Context.Reviews.Remove(Review);
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("Review ID'si {Id} olan inceleme başarıyla silindi.", Id);
+
+                return new DeleteResponseDto { IsDeleted = true };
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "İnceleme silinirken bir hata meydana geldi");
+                return null;
+            }
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
 using Moviemo.Dtos;
@@ -14,19 +13,26 @@ namespace Moviemo.Services
 {
     public class UserService : IUserService
     {
+        private readonly ILogger<UserService> _Logger;
+
         private readonly AppDbContext _Context;
 
         private readonly ITokenInterface _TokenService;
 
-        public UserService(AppDbContext Context, ITokenInterface TokenService)
+        public UserService(ILogger<UserService> Logger, AppDbContext Context, ITokenInterface TokenService)
         {
+            _Logger = Logger;
             _Context = Context;
             _TokenService = TokenService;
         }
 
-        public async Task<List<UserGetDto>> GetAllAsync()
+        public async Task<List<UserGetDto>?> GetAllAsync()
         {
-            return await _Context.Users
+            _Logger.LogInformation("Tüm kullanıcı bilgileri alınıyor...");
+
+            try
+            {
+                return await _Context.Users
                 .Include(U => U.Reviews)
                 .ThenInclude(R => R.Movie)
                 .Include(U => U.Comments)
@@ -63,11 +69,21 @@ namespace Moviemo.Services
                     }).ToList()
                 })
                 .ToListAsync();
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Tüm kullanıcı bilgileri alınırken bir hata meydana geldi.");
+                return null;
+            }
         }
 
         public async Task<UserGetDto?> GetByIdAsync(long Id)
         {
-            return await _Context.Users
+            _Logger.LogInformation("User ID'si {Id} olan kullanıcı bilgisi alınıyor...", Id);
+
+            try
+            {
+                return await _Context.Users
                 .Include(U => U.Comments)
                 .ThenInclude(C => C.Movie)
                 .Select(U => new UserGetDto
@@ -102,143 +118,165 @@ namespace Moviemo.Services
                     }).ToList()
                 })
                 .FirstOrDefaultAsync(U => U.Id == Id);
-        }
-
-        public async Task<UserCreateDto?> CreateAsync(UserCreateDto Dto)
-        {
-            if (await _Context.Users.AnyAsync(U => U.Username == Dto.Username))
+            }
+            catch (Exception Ex)
             {
+                _Logger.LogError(Ex, "Kullanıcı bilgisi alınırken bir hata meydana geldi.");
                 return null;
             }
-
-            var User = new User
-            {
-                Name = Dto.Name,
-                Surname = Dto.Surname,
-                Username = Dto.Username,
-                Email = Dto.Email,
-                UserRole = Dto.UserRole
-            };
-
-            var HashedPassword = new PasswordHasher<User>()
-                .HashPassword(User, Dto.Password);
-
-            User.PasswordHash = HashedPassword;
-
-            await _Context.Users.AddAsync(User);
-            await _Context.SaveChangesAsync();
-
-            return Dto;
         }
 
-        public async Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, UserUpdateDto Dto)
+        public async Task<CreateResponseDto?> CreateAsync(UserCreateDto Dto)
         {
-            var ResponseDto = new UpdateResponseDto
+            _Logger.LogInformation("Yeni kullanıcı oluşturuluyor: {@UserCreateDto}", Dto);
+
+            try
             {
-                IsUpdated = false,
-                Issue = UpdateIssue.None
-            };
-
-            var User = await _Context.Users.FindAsync(Id);
-
-            if (User == null)
-            {
-                ResponseDto.Issue = UpdateIssue.NotFound;
-                return ResponseDto;
-            }
-
-            else if (User.Id != UserId)
-            {
-                ResponseDto.Issue = UpdateIssue.Unauthorized;
-                return ResponseDto;
-            }
-
-            var DtoProperties = Dto.GetType().GetProperties();
-            var UserType = User.GetType();
-
-            foreach (var Property in DtoProperties)
-            {
-                var NewValue = Property.GetValue(Dto);
-                if (NewValue == null) continue;
-
-                var TargetProperty = UserType.GetProperty(Property.Name);
-
-                if (TargetProperty == null || !TargetProperty.CanWrite) continue;
-
-                if (Property.Name == "Username" && 
-                    User.Username != Dto.Username &&
-                    Dto.Username != null &&
-                    await _Context.Users.AnyAsync(U => U.Username == Dto.Username))
+                if (await _Context.Users.AnyAsync(U => U.Username == Dto.Username))
                 {
-                    ResponseDto.Issue = UpdateIssue.SameUsername;
-                    return ResponseDto;
+                    return new CreateResponseDto { Issue = CreateIssue.SameContent };
                 }
 
-                if (Property.Name == "Password" && Dto.Password != null)
+                var User = new User
                 {
-                    NewValue = new PasswordHasher<User>()
-                        .HashPassword(User, Dto.Password);
-                }
+                    Name = Dto.Name,
+                    Surname = Dto.Surname,
+                    Username = Dto.Username,
+                    Email = Dto.Email,
+                    UserRole = Dto.UserRole
+                };
 
+                var HashedPassword = new PasswordHasher<User>()
+                    .HashPassword(User, Dto.Password);
 
-                TargetProperty.SetValue(User, NewValue);
+                User.PasswordHash = HashedPassword;
+
+                await _Context.Users.AddAsync(User);
+                await _Context.SaveChangesAsync();
+
+                return new CreateResponseDto { IsCreated = true };
             }
-
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsUpdated = true;
-
-            return ResponseDto;
-        }
-
-        public async Task<DeleteResponseDto> DeleteAsync(long Id, long UserId)
-        {
-            var ResponseDto = new DeleteResponseDto
+            catch (Exception Ex)
             {
-                IsDeleted = false,
-                Issue = DeleteIssue.None
-            };
-
-            var User = await _Context.Users.FindAsync(Id);
-
-            if (User == null)
-            {
-                ResponseDto.Issue = DeleteIssue.NotFound;
-                return ResponseDto;
-            }
-
-            else if (User.Id != UserId)
-            {
-                ResponseDto.Issue = DeleteIssue.Unauthorized;
-                return ResponseDto;
-            }
-
-            _Context.Users.Remove(User);
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsDeleted = true;
-
-            return ResponseDto;
-        }
-
-        public async Task<TokenResponseDto?> LoginAsync(UserLoginDto Dto)
-        {
-            var User = await _Context.Users.FirstOrDefaultAsync(U => U.Username == Dto.Username);
-
-            if (User == null) return null;
-
-            if (new PasswordHasher<User>().VerifyHashedPassword(User, User.PasswordHash, Dto.Password)
-                == PasswordVerificationResult.Failed)
-            {
+                _Logger.LogError(Ex, "Kullanıcı oluşturulurken bir hata meydana geldi.");
                 return null;
             }
-
-            return await _TokenService.CreateTokenResponseAsync(User);
         }
 
-        public async Task<TokenResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto Dto)
+        public async Task<UpdateResponseDto?> UpdateAsync(long Id, long UserId, UserUpdateDto Dto)
         {
-            var Result = await _TokenService.RefreshTokensAsync(Dto);
+            _Logger.LogInformation("User ID'si {Id} olan kullanıcı güncelleniyor: {@UserUpdateDto}", Id, Dto);
+
+            try
+            {
+                var User = await _Context.Users.FindAsync(Id);
+
+                if (User == null)
+                    return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
+
+                var DtoProperties = Dto.GetType().GetProperties();
+                var UserType = User.GetType();
+
+                foreach (var Property in DtoProperties)
+                {
+                    var NewValue = Property.GetValue(Dto);
+                    if (NewValue == null) continue;
+
+                    var TargetProperty = UserType.GetProperty(Property.Name);
+
+                    if (TargetProperty == null || !TargetProperty.CanWrite) continue;
+
+                    if (Property.Name == "Username" &&
+                        User.Username != Dto.Username &&
+                        Dto.Username != null &&
+                        await _Context.Users.AnyAsync(U => U.Username == Dto.Username))
+                    {
+                        return new UpdateResponseDto { Issue = UpdateIssue.SameContent };
+                    }
+
+                    if (Property.Name == "Password" && Dto.Password != null)
+                    {
+                        NewValue = new PasswordHasher<User>()
+                            .HashPassword(User, Dto.Password);
+                    }
+
+
+                    TargetProperty.SetValue(User, NewValue);
+                }
+
+                await _Context.SaveChangesAsync();
+
+
+                _Logger.LogInformation("User ID'si {Id} olan kullanıcı başarıyla güncellendi.", Id);
+
+                return new UpdateResponseDto { IsUpdated = true };
+            } 
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Kullanıcı güncellenirken bir hata meydana geldi.");
+                return null;
+            }
+        }
+
+        public async Task<DeleteResponseDto?> DeleteAsync(long Id, long UserId)
+        {
+            _Logger.LogInformation("User ID'si {Id} olan kullanıcı siliniyor.", Id);
+
+            try
+            {
+                var User = await _Context.Users.FindAsync(Id);
+
+                if (User == null)
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
+
+                _Context.Users.Remove(User);
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("User ID'si {Id} olan kullanıcı başarıyla silindi.", Id);
+
+                return new DeleteResponseDto { IsDeleted = true };
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Kullanıcı silinirken bir hata meydana geldi.");
+                return null;
+            }
+        }
+
+        public async Task<LoginResponseDto?> LoginAsync(UserLoginDto Dto)
+        {
+            _Logger.LogInformation("Kullanıcı {Username} giriş yapıyor...", Dto.Username);
+
+            try
+            {
+                var User = await _Context.Users.FirstOrDefaultAsync(U => U.Username == Dto.Username);
+
+                if (User == null)
+                    return new LoginResponseDto { Issue = LoginIssue.NotFound };
+
+                if (new PasswordHasher<User>().VerifyHashedPassword(User, User.PasswordHash, Dto.Password)
+                    == PasswordVerificationResult.Failed)
+                {
+                    return new LoginResponseDto { Issue = LoginIssue.IncorrectPassword};
+                }
+
+                var Tokens = await _TokenService.CreateTokenResponseAsync(User);
+
+                _Logger.LogInformation("Kullanıcı {Username } başarıyla giriş yaptı.", Dto.Username);
+
+                return new LoginResponseDto { IsLoggedIn = true };
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Kullanıcı giriş yaparken bir hata meydana geldi.");
+                return null;
+            }
+        }
+
+        public async Task<TokenResponseDto?> RefreshTokensAsync(long UserId, RefreshTokenRequestDto Dto)
+        {
+            var Result = await _TokenService.RefreshTokensAsync(UserId, Dto.RefreshToken);
+
             return Result;
         }
     }

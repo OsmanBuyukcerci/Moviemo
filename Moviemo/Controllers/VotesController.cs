@@ -24,6 +24,9 @@ namespace Moviemo.Controllers
         {
             var Votes = await _VoteService.GetAllAsync();
 
+            if (Votes == null)
+                return StatusCode(500, "Tüm oy bilgileri alınırken bir sunucu hatası meydana geldi.");
+
             return Ok(Votes);
         }
 
@@ -43,7 +46,13 @@ namespace Moviemo.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateVote([FromBody] VoteCreateDto Dto)
         {
-            var Vote = await _VoteService.CreateAsync(Dto);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
+
+            var Vote = await _VoteService.CreateAsync(Dto, UserId);
+
+            if (Vote == null)
+                return StatusCode(500, "Oy oluşturulurken bir sunucu hatası meydana geldi.");
 
             return Ok(Dto);
         }
@@ -53,19 +62,21 @@ namespace Moviemo.Controllers
         [HttpPut("{Id}")]
         public async Task<IActionResult> UpdateVote(long Id, VoteUpdateDto Dto)
         {
-            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
             var ResponseDto = await _VoteService.UpdateAsync(Id, UserId, Dto);
 
+            if (ResponseDto == null)
+                return StatusCode(500, "Oy bilgisi güncellenirken bir sunucu hatası meydana geldi.");
+
             if (ResponseDto.IsUpdated) return Ok(Dto);
 
-            else if (ResponseDto.Issue == UpdateIssue.NotFound)
-                return NotFound($"Vote ID'si {Id} olan oy bulunamadı.");
-
-            else if (ResponseDto.Issue == UpdateIssue.Unauthorized)
-                return Unauthorized("Size ait olmayan bir oyu güncelleyemezsiniz.");
-
-            return BadRequest("Oy güncelleme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            {
+                UpdateIssue.NotFound => NotFound($"Vote ID'si {Id} olan oy bulunamadı."),
+                _ => BadRequest("Oy güncelleme işlemi gerçekleştirilemedi.")
+            };
         }
 
         // api/votes/{Id} -> Rotada belirtilen ID'ye sahip oyu sil}
@@ -73,19 +84,21 @@ namespace Moviemo.Controllers
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteVote(long Id)
         {
-            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
             var ResponseDto = await _VoteService.DeleteAsync(Id, UserId);
 
+            if (ResponseDto == null)
+                return StatusCode(500, "Oy silinirken bir sunucu hatası meydana geldi.");
+
             if (ResponseDto.IsDeleted) return NoContent();
 
-            else if (ResponseDto.Issue == DeleteIssue.NotFound)
-                return NotFound($"Vote ID'si {Id} olan oy bulunamadı.");
-
-            else if (ResponseDto.Issue == DeleteIssue.Unauthorized)
-                return Unauthorized("Size ait olmayan bir oyu silemezsiniz.");
-
-            return BadRequest("Oy silme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            {
+                DeleteIssue.NotFound => NotFound($"Vote ID'si {Id} olan oy bulunamadı."),
+                _ => BadRequest("Oy silme işlemi gerçekleştirilemedi.")
+            };
         }
     }
 }

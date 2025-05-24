@@ -25,6 +25,9 @@ namespace Moviemo.Controllers
         {
             var Reports = await _ReportService.GetAllAsync();
 
+            if (Reports == null)
+                return StatusCode(500, "Tüm rapor bilgileri alınırken bir sunucu hatası meydana geldi.");
+
             return Ok(Reports);
         }
 
@@ -35,7 +38,8 @@ namespace Moviemo.Controllers
         {
             var Report = await _ReportService.GetByIdAsync(Id);
 
-            if (Report == null) return NotFound();
+            if (Report == null) 
+                return NotFound();
 
             return Ok(Report);
         }
@@ -45,7 +49,13 @@ namespace Moviemo.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateReport([FromBody] ReportCreateDto Dto)
         {
-            var Report = await _ReportService.CreateAsync(Dto);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
+
+            var Report = await _ReportService.CreateAsync(Dto, UserId);
+
+            if (Report == null)
+                return StatusCode(500, "Rapor oluşturulurken bir sunucu hatası meydana geldi.");
 
             return Ok(Dto);
         }
@@ -55,19 +65,21 @@ namespace Moviemo.Controllers
         [HttpPut("{Id}")]
         public async Task<IActionResult> UpdateReport(long Id, ReportUpdateDto Dto)
         {
-            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
             var ResponseDto = await _ReportService.UpdateAsync(Id, UserId, Dto);
 
+            if (ResponseDto == null)
+                return StatusCode(500, "Rapor güncellenirken bir sunucu hatası meydana geldi.");
+
             if (ResponseDto.IsUpdated) return Ok(Dto);
 
-            else if (ResponseDto.Issue == UpdateIssue.NotFound)
-                return NotFound($"Report ID'si {Id} olan rapor bulunamadı.");
-
-            else if (ResponseDto.Issue == UpdateIssue.Unauthorized)
-                return Unauthorized("Size ait olmayan bir raporu güncelleyemezsiniz.");
-
-            return BadRequest("Rapor güncelleme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            { 
+                UpdateIssue.NotFound => NotFound($"Report ID'si {Id} olan rapor bulunamadı."),
+                _ => BadRequest("Rapor güncelleme işlemi gerçekleştirilemedi.")
+            };
         }
 
         // api/reports/{Id} -> Rotada belirtilen ID'ye sahip raporu sil}
@@ -75,19 +87,21 @@ namespace Moviemo.Controllers
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteReport(long Id)
         {
-            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
             var ResponseDto = await _ReportService.DeleteAsync(Id, UserId);
 
+            if (ResponseDto == null)
+                return StatusCode(500, "Rapor silinirken bir sunucu hatası meydana geldi.");
+
             if (ResponseDto.IsDeleted) return NoContent();
 
-            else if (ResponseDto.Issue == DeleteIssue.NotFound)
-                return NotFound($"Report ID'si {Id} olan rapor bulunamadı.");
-
-            else if (ResponseDto.Issue == DeleteIssue.Unauthorized)
-                return Unauthorized("Size ait olmayan bir raporu silemezsiniz.");
-
-            return BadRequest("Rapor silme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            {
+                DeleteIssue.NotFound => NotFound($"Report ID'si {Id} olan rapor bulunamadı."),
+                _ => BadRequest("Rapor silme işlemi gerçekleştirilemedi.")
+            };
         }
     }
 }

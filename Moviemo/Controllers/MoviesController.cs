@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Moviemo.Dtos;
 using Moviemo.Dtos.Movie;
@@ -24,6 +25,9 @@ namespace Moviemo.Controllers
         {
             var Movies = await _MovieService.GetAllAsync();
 
+            if (Movies == null)
+                return StatusCode(500, "Tüm film bilgileri alınırken bir sunucu hatası meydana geldi.");
+
             return Ok(Movies);
         }
 
@@ -45,6 +49,9 @@ namespace Moviemo.Controllers
         {
             var Movie = await _MovieService.CreateAsync(Dto);
 
+            if (Movie == null)
+                return StatusCode(500, "Film oluşturulurken bir sunucu hatası meydana geldi.");
+
             return Ok(Movie);
         }
 
@@ -55,12 +62,17 @@ namespace Moviemo.Controllers
         {
             var ResponseDto = await _MovieService.UpdateAsync(Id, Dto);
 
-            if (ResponseDto.IsUpdated) return Ok(Dto);
+            if (ResponseDto == null)
+                return StatusCode(500, "Yorum güncellenirken bir sunucu hatası meydana geldi.");
 
-            else if (ResponseDto.Issue == UpdateIssue.NotFound) 
-                return NotFound($"Movie ID'si {Id} olan film bulunamadı.");
+            if (ResponseDto.IsUpdated)
+                return Ok(Dto);
 
-            return BadRequest("Film güncelleştirme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            {
+                UpdateIssue.NotFound => NotFound($"Movie ID'si {Id} olan film bulunamadı."),
+                _ => BadRequest("Film güncelleştirme işlemi gerçekleştirilemedi.")
+            };
         }
 
         // api/movies/{Id} -> Rotada belirtilen ID'ye sahip filmi sil
@@ -70,12 +82,16 @@ namespace Moviemo.Controllers
         {
             var ResponseDto = await _MovieService.DeleteAsync(Id);
 
+            if (ResponseDto == null)
+                return StatusCode(500, "Film silinirken bir sunucu hatası meydana geldi");
+
             if (ResponseDto.IsDeleted) return NoContent();
 
-            else if (ResponseDto.Issue == DeleteIssue.NotFound)
-                return NotFound($"Movie ID'si {Id} olan film bulunamadı");
-
-            return BadRequest("Film silme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            {
+                DeleteIssue.NotFound => NotFound($"Movie ID'si {Id} olan film bulunamadı"),
+                _ => BadRequest("Film silme işlemi gerçekleştirilemedi.")
+            };
         }
     }
 }

@@ -25,6 +25,9 @@ namespace Moviemo.Controllers
         {
             var Reviews = await _ReviewService.GetAllAsync();
 
+            if (Reviews == null)
+                return StatusCode(500, "Tüm rapor bilgileri alınırken bir hata meydana geldi");
+
             return Ok(Reviews);
         }
 
@@ -44,7 +47,13 @@ namespace Moviemo.Controllers
         [Authorize]
         public async Task<IActionResult> CreateReview([FromBody] ReviewCreateDto Dto)
         {
-            ReviewCreateDto ResponseDto = await _ReviewService.CreateAsync(Dto);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
+
+            var ResponseDto = await _ReviewService.CreateAsync(Dto, UserId);
+
+            if (ResponseDto == null)
+                return StatusCode(500, "İnceleme oluşturulurken bir sunucu hatası meydana geldi.");
 
             return Ok(ResponseDto);
         }
@@ -54,19 +63,21 @@ namespace Moviemo.Controllers
         [HttpPut("{Id}")]
         public async Task<IActionResult> UpdateReview(long Id, [FromBody] ReviewUpdateDto Dto)
         {
-            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
             var ResponseDto = await _ReviewService.UpdateAsync(Id, UserId, Dto);
 
+            if (ResponseDto == null)
+                return StatusCode(500, "İnceleme güncellenirken bir sunucu hatası meydana geldi.");
+
             if (ResponseDto.IsUpdated) return Ok(Dto);
 
-            else if (ResponseDto.Issue == UpdateIssue.NotFound)
-                return NotFound($"Review ID'si {Id} olan inceleme bulunamadı.");
-
-            else if (ResponseDto.Issue == UpdateIssue.Unauthorized)
-                return Unauthorized("Size ait olmayan bir incelemeyi güncelleyemezsiniz.");
-
-            return BadRequest("İnceleme güncelleme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            {
+                UpdateIssue.NotFound => NotFound($"Review ID'si {Id} olan inceleme bulunamadı."),
+                _ => BadRequest("İnceleme güncelleme işlemi gerçekleştirilemedi.")
+            };
         }
 
         // api/reviews/{Id} -> Rotada belirtilen ID'ye sahip incelemeyi sil
@@ -74,19 +85,21 @@ namespace Moviemo.Controllers
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteReview(long Id)
         {
-            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
             var ResponseDto = await _ReviewService.DeleteAsync(Id, UserId);
 
+            if (ResponseDto == null)
+                return StatusCode(500, "İnceleme silinirken bir sunucu hatası meydana geldi.");
+
             if (ResponseDto.IsDeleted) return NoContent();
 
-            else if (ResponseDto.Issue == DeleteIssue.NotFound)
-                return NotFound($"Review ID'si {Id} olan inceleme bulunamadı.");
-
-            else if (ResponseDto.Issue == DeleteIssue.Unauthorized)
-                return Unauthorized("Size ait olmayan bir incelemeyi silemezsiniz.");
-
-            return BadRequest("İnceleme silme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            { 
+                DeleteIssue.NotFound => NotFound($"Review ID'si {Id} olan inceleme bulunamadı."),
+                _ => BadRequest("İnceleme silme işlemi gerçekleştirilemedi.")
+            };
         }
     }
 }

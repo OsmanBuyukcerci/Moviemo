@@ -23,20 +23,23 @@ namespace Moviemo.Controllers
         [HttpGet]
         public async  Task<IActionResult> GetAllComments()
         {
-            var Users = await _CommentService.GetAllAsync();
+            var Comments = await _CommentService.GetAllAsync();
 
-            return Ok(Users);
+            if (Comments == null) 
+                return StatusCode(500, "Tüm film bilgileri alınırken bir sunucu hatası meydana geldi.");
+
+            return Ok(Comments);
         }
 
         // api/comments/{Id} -> Rotada belirtilen ID'ye sahip yorum bilgilerini al
         [HttpGet("{Id}")]
         public async Task<IActionResult> GetCommentById(long Id)
         {
-            var User = await _CommentService.GetByIdAsync(Id);
+            var Comment = await _CommentService.GetByIdAsync(Id);
 
-            if (User == null) return NotFound();
+            if (Comment == null) return NotFound();
 
-            return Ok(User);
+            return Ok(Comment);
         }
 
         // api/comments -> Yorum oluştur
@@ -44,7 +47,12 @@ namespace Moviemo.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateComment([FromBody] CommentCreateDto Dto)
         {
-            var Comment = await _CommentService.CreateAsync(Dto);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
+
+            var Comment = await _CommentService.CreateAsync(Dto, UserId);
+
+            if (Comment == null) return StatusCode(500, "Yorum oluşturulurken bir sunucu hatası meydana geldi");
 
             return Ok(Comment);
         }
@@ -54,19 +62,22 @@ namespace Moviemo.Controllers
         [HttpPut("{Id}")]
         public async Task<IActionResult> UpdateComment(long Id, [FromBody] CommentUpdateDto Dto)
         {
-            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
             var ResponseDto = await _CommentService.UpdateAsync(Id, UserId, Dto);
 
-            if (ResponseDto.IsUpdated) return Ok(Dto);
+            if (ResponseDto == null) 
+                return StatusCode(500, "Yorum güncellenirken bir sunucu hatası meydana geldi.");
 
-            else if (ResponseDto.Issue == UpdateIssue.NotFound)
-                return NotFound($"Comment ID'si {Id} olan comment bulunamadı");
+            if (ResponseDto.IsUpdated)
+                return Ok(Dto);
 
-            else if (ResponseDto.Issue == UpdateIssue.Unauthorized)
-                return Unauthorized("Size ait olmayan bir yorumu güncelleyemezsiniz");
-
-                return BadRequest("Yorum güncelleme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            {
+                UpdateIssue.NotFound => NotFound($"Comment ID'si {Id} olan comment bulunamadı"),
+                _ => BadRequest("Yorum güncelleme işlemi gerçekleştirilemedi.")
+            };
         }
 
         // api/comments/{Id} -> Rotada belirtilen ID'ye sahip yorumu sil
@@ -74,18 +85,21 @@ namespace Moviemo.Controllers
         [HttpDelete("{Id}")]
         public async Task<IActionResult> DeleteComment(long Id)
         {
-            var UserId = long.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
 
             var ResponseDto = await _CommentService.DeleteAsync(Id, UserId);
 
+            if (ResponseDto == null)
+                return StatusCode(500, "Yorum silinirken bir sunucu hatası meydana geldi.");
+
             if (ResponseDto.IsDeleted) return NoContent();
 
-            else if (ResponseDto.Issue == DeleteIssue.NotFound) return NotFound("Silinmek istenen yorum bulunamadı.");
-
-            else if (ResponseDto.Issue == DeleteIssue.Unauthorized)
-                return Unauthorized("Size ait olmayan bir yorumu silemezsiniz.");
-
-            return BadRequest("Yorum silme işlemi gerçekleştirilemedi.");
+            return ResponseDto.Issue switch
+            {
+                DeleteIssue.NotFound => NotFound("Silinmek istenen yorum bulunamadı."),
+                _ => BadRequest("Yorum silme işlemi gerçekleştirilemedi.")
+            };
         }
     }
 }

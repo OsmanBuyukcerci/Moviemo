@@ -1,5 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
 using Moviemo.Dtos;
 using Moviemo.Dtos.Report;
@@ -10,18 +9,25 @@ namespace Moviemo.Services
 {
     public class ReportService : IReportService
     {
+        private readonly ILogger<ReportService> _Logger;
+
         private readonly AppDbContext _Context;
 
-        public ReportService(AppDbContext Context)
+        public ReportService(AppDbContext Context, ILogger<ReportService> Logger)
         {
+            _Logger = Logger;
             _Context = Context;
         }
 
-        public async Task<List<ReportGetDto>> GetAllAsync()
+        public async Task<List<ReportGetDto>?> GetAllAsync()
         {
-            return await _Context.Reports
+            _Logger.LogInformation("Tüm rapor bilgileri alınıyor...");
+
+            try
+            {
+                return await _Context.Reports
                 .Include(R => R.User)
-                .Select(R => new ReportGetDto 
+                .Select(R => new ReportGetDto
                 {
                     Id = R.Id,
                     UserId = R.User.Id,
@@ -30,11 +36,21 @@ namespace Moviemo.Services
                     CreatedAt = R.CreatedAt
                 })
                 .ToListAsync();
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Tüm rapor bilgileri alınırken bir hata meydana geldi.");
+                return null;
+            }
         }
 
         public async Task<ReportGetDto?> GetByIdAsync(long Id)
         {
-            return await _Context.Reports
+            _Logger.LogInformation("Report ID'si {Id} olan rapor bilgisi alınıyor...", Id);
+
+            try
+            {
+                return await _Context.Reports
                 .Include(R => R.User)
                 .Select(R => new ReportGetDto
                 {
@@ -45,94 +61,102 @@ namespace Moviemo.Services
                     CreatedAt = R.CreatedAt
                 })
                 .FirstOrDefaultAsync(R => R.Id == Id);
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Rapor bilgisi alınırken bir hata meydana geldi.");
+                return null;
+            }
         }
 
-        public async Task<ReportCreateDto> CreateAsync(ReportCreateDto Dto)
+        public async Task<ReportCreateDto?> CreateAsync(ReportCreateDto Dto, long UserId)
         {
-            var Report = new Report
+            _Logger.LogInformation("Yeni rapor oluşturuluyor: {@ReportCreateDto}", Dto);
+
+            try
             {
-                UserId = Dto.UserId,
-                Title = Dto.Title,
-                Details = Dto.Details
-            };
+                var Report = new Report
+                {
+                    UserId = UserId,
+                    Title = Dto.Title,
+                    Details = Dto.Details
+                };
 
-            await _Context.Reports.AddAsync(Report);
-            await _Context.SaveChangesAsync();
+                await _Context.Reports.AddAsync(Report);
+                await _Context.SaveChangesAsync();
 
-            return Dto;
+                _Logger.LogInformation("Rapor başarıyla oluşturuldu.");
+
+                return Dto;
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Rapor oluşturulurken bir hata meydana geldi.");
+                return null;
+            }
         }
 
-        public async Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, ReportUpdateDto Dto)
+        public async Task<UpdateResponseDto?> UpdateAsync(long Id, long UserId, ReportUpdateDto Dto)
         {
-            var ResponseDto = new UpdateResponseDto
-            {
-                IsUpdated = false,
-                Issue = UpdateIssue.None
-            };
+            _Logger.LogInformation("Report ID'si {Id} olan rapor güncelleniyor: {@ReportUpdateDto}", Id , Dto);
 
-            var Report = await _Context.Reports.FindAsync(Id);
-
-            if (Report == null)
+            try
             {
-                ResponseDto.Issue = UpdateIssue.NotFound;
-                return ResponseDto;
+                var Report = await _Context.Reports.FindAsync(Id);
+
+                if (Report == null)
+                    return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
+
+                var DtoProperties = Dto.GetType().GetProperties();
+                var ReportType = Report.GetType();
+
+                foreach (var Property in DtoProperties)
+                {
+                    var NewValue = Property.GetValue(Dto);
+                    if (NewValue == null) continue;
+
+                    var TargetProperty = ReportType.GetProperty(Property.Name);
+                    if (TargetProperty == null || !TargetProperty.CanWrite) continue;
+
+                    TargetProperty.SetValue(Report, NewValue);
+                }
+
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("Report ID'si {Id} olan rapor başarıyla güncellendi", Id);
+
+                return new UpdateResponseDto { IsUpdated = true };
             }
-
-            else if (Report.UserId != UserId)
+            catch (Exception Ex)
             {
-                ResponseDto.Issue = UpdateIssue.Unauthorized;
-                return ResponseDto;
+                _Logger.LogError(Ex, "Rapor güncellenirken bir hata meydana geldi.");
+                return null;
             }
-
-            var DtoProperties = Dto.GetType().GetProperties();
-            var ReportType = Report.GetType();
-
-            foreach(var Property in DtoProperties)
-            {
-                var NewValue = Property.GetValue(Dto);
-                if (NewValue == null) continue;
-
-                var TargetProperty = ReportType.GetProperty(Property.Name);
-                if (TargetProperty == null || !TargetProperty.CanWrite) continue;
-
-                TargetProperty.SetValue(Report, NewValue);
-            }
-
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsUpdated = true;
-
-            return ResponseDto;
         }
 
-        public async Task<DeleteResponseDto> DeleteAsync(long Id, long UserId)
+        public async Task<DeleteResponseDto?> DeleteAsync(long Id, long UserId)
         {
-            var ResponseDto = new DeleteResponseDto
-            {
-                IsDeleted = false,
-                Issue = DeleteIssue.None
-            };
+            _Logger.LogInformation("Report ID'si {Id} olan rapor siliniyor...", Id);
 
-            var Report = await _Context.Reports.FindAsync(Id);
+            try
+            {
+                var Report = await _Context.Reports.FindAsync(Id);
 
-            if (Report == null)
-            {
-                ResponseDto.Issue = DeleteIssue.NotFound;
-                return ResponseDto;
-            } 
-            
-            else if (Report.UserId != UserId)
-            {
-                ResponseDto.Issue = DeleteIssue.Unauthorized;
-                return ResponseDto;
+                if (Report == null)
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
+
+                _Context.Reports.Remove(Report);
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("Report ID'si {Id} olan rapor başarıyla silindi.", Id);
+
+                return new DeleteResponseDto { IsDeleted = true };
             }
-
-            _Context.Reports.Remove(Report);
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsDeleted = true;
-
-            return ResponseDto;
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Rapor silinirken bir hata meydana geldi.");
+                return null;
+            }
         }
     }
 }

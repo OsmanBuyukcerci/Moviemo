@@ -6,10 +6,10 @@ namespace Moviemo.Services.Interfaces
 {
     public interface IVoteService
     {
-        Task<List<VoteGetDto>> GetAllAsync();
+        Task<List<VoteGetDto>?> GetAllAsync();
         Task<VoteGetDto?> GetByIdAsync(long Id);
-        Task<VoteCreateDto> CreateAsync(VoteCreateDto Dto);
-        Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, VoteUpdateDto Dto);
-        Task<DeleteResponseDto> DeleteAsync(long Id, long UserId);
+        Task<VoteCreateDto?> CreateAsync(VoteCreateDto Dto, long UserId);
+        Task<UpdateResponseDto?> UpdateAsync(long Id, long UserId, VoteUpdateDto Dto);
+        Task<DeleteResponseDto?> DeleteAsync(long Id, long UserId);
     }
 }

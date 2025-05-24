@@ -9,31 +9,48 @@ namespace Moviemo.Services
 {
     public class VoteService : IVoteService
     {
+        private readonly ILogger<VoteService> _Logger;
+
         private readonly AppDbContext _Context;
 
-        public VoteService(AppDbContext Context) 
+        public VoteService(ILogger<VoteService> Logger, AppDbContext Context) 
         {
+            _Logger = Logger;
             _Context = Context;
         }
 
-        public async Task<List<VoteGetDto>> GetAllAsync()
+        public async Task<List<VoteGetDto>?> GetAllAsync()
         {
-            return await _Context.Votes
+            _Logger.LogInformation("Tüm oy bilgileri alınıyor...");
+
+            try
+            {
+                return await _Context.Votes
                 .Include(V => V.User)
                 .Include(V => V.Comment)
-                .Select(V => new VoteGetDto 
+                .Select(V => new VoteGetDto
                 {
                     Id = V.Id,
                     UserId = V.User.Id,
                     CommentId = V.Comment.Id,
-                    VoteType = V.VoteType 
+                    VoteType = V.VoteType
                 })
                 .ToListAsync();
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Tüm oy bilgileri alınırken bir hata meydana geldi.");
+                return null;
+            }
         }
 
         public async Task<VoteGetDto?> GetByIdAsync(long Id)
         {
-            return await _Context.Votes
+            _Logger.LogInformation("Vote ID'si {Id} olan vote alınıyor...", Id);
+
+            try
+            {
+                return await _Context.Votes
                 .Include(V => V.User)
                 .Include(V => V.Comment)
                 .Select(V => new VoteGetDto
@@ -44,94 +61,103 @@ namespace Moviemo.Services
                     VoteType = V.VoteType
                 })
                 .FirstOrDefaultAsync(V => V.Id == Id);
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Oy bilgisi alınırken bir hata meydana geldi.");
+                return null;
+            }
         }
 
-        public async Task<VoteCreateDto> CreateAsync(VoteCreateDto Dto)
+        public async Task<VoteCreateDto?> CreateAsync(VoteCreateDto Dto, long UserId)
         {
-            var Vote = new Vote 
-            { 
-                UserId = Dto.UserId,
-                VoteType = Dto.VoteType,
-                CommentId = Dto.CommentId,
-            };
+            _Logger.LogInformation("Yeni oy oluşturuluyor: {@VoteCreateDto}", Dto);
 
-            await _Context.Votes.AddAsync(Vote);
-            await _Context.SaveChangesAsync();
+            try
+            {
+                var Vote = new Vote
+                {
+                    UserId = UserId,
+                    VoteType = Dto.VoteType,
+                    CommentId = Dto.CommentId,
+                };
 
-            return Dto;
+                await _Context.Votes.AddAsync(Vote);
+                await _Context.SaveChangesAsync();
+
+                return Dto;
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Oy oluşturulurken bir hata meydana geldi.");
+                return null;
+            }
         }
 
-        public async Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, VoteUpdateDto Dto)
+        public async Task<UpdateResponseDto?> UpdateAsync(long Id, long UserId, VoteUpdateDto Dto)
         {
-            var ResponseDto = new UpdateResponseDto
-            {
-                IsUpdated = false,
-                Issue = UpdateIssue.None
-            };
+            _Logger.LogInformation("Vote ID'si {Id} olan oy güncelleniyor: {@VoteUpdateDto}", Id, Dto);
 
-            var Vote = await _Context.Votes.FindAsync(Id);
-
-            if (Vote == null)
+            try
             {
-                ResponseDto.Issue = UpdateIssue.NotFound;
-                return ResponseDto;
+                var Vote = await _Context.Votes.FindAsync(Id);
+
+                if (Vote == null)
+                    return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
+
+                var DtoProperties = Dto.GetType().GetProperties();
+                var VoteType = Vote.GetType();
+
+                foreach (var Property in DtoProperties)
+                {
+                    var NewValue = Property.GetValue(Dto);
+                    if (NewValue == null) continue;
+
+                    var TargetProperty = VoteType.GetProperty(Property.Name);
+                    if (TargetProperty == null || !TargetProperty.CanWrite) continue;
+
+                    TargetProperty.SetValue(Vote, NewValue);
+                }
+
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("Vote ID'si {Id} olan oy başarıyla güncellendi.", Id);
+
+                return new UpdateResponseDto { IsUpdated = true };
+            } 
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Oy bilgisi alınırken bir hata meydana geldi.");
+                return null;
             }
-
-            else if (Vote.UserId != UserId)
-            {
-                ResponseDto.Issue = UpdateIssue.Unauthorized;
-                return ResponseDto;
-            }
-
-            var DtoProperties = Dto.GetType().GetProperties();
-            var VoteType = Vote.GetType();
-
-            foreach (var Property in DtoProperties)
-            {
-                var NewValue = Property.GetValue(Dto);
-                if (NewValue == null) continue;
-
-                var TargetProperty = VoteType.GetProperty(Property.Name);
-                if (TargetProperty == null || !TargetProperty.CanWrite) continue;
-
-                TargetProperty.SetValue(Vote, NewValue);
-            }
-
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsUpdated = true;
-
-            return ResponseDto;
         }
 
-        public async Task<DeleteResponseDto> DeleteAsync(long Id, long UserId)
+        public async Task<DeleteResponseDto?> DeleteAsync(long Id, long UserId)
         {
-            var ResponseDto = new DeleteResponseDto
+            _Logger.LogInformation("Vote ID'si {Id} olan oy siliniyor...", Id);
+             
+            try
             {
-                IsDeleted = false,
-                Issue = DeleteIssue.None
-            };
+                var Vote = await _Context.Votes.FindAsync(Id);
 
-            var Vote = await _Context.Votes.FindAsync(Id);
+                if (Vote == null)
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
 
-            if (Vote == null)
+                _Context.Votes.Remove(Vote);
+
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("Vote ID'si {Id} olan oy başarıyla silindi.", Id);
+
+                return new DeleteResponseDto { IsDeleted = true };
+            } 
+            catch (Exception Ex)
             {
-                ResponseDto.Issue = DeleteIssue.NotFound;
-                return ResponseDto;
+                _Logger.LogError(Ex, "Oy silinirken bir hata meydana geldi.");
+                return null;
             }
 
-            else if (Vote.UserId != UserId)
-            {
-                ResponseDto.Issue = DeleteIssue.Unauthorized;
-            }
-
-            _Context.Votes.Remove(Vote);
-
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsDeleted = true;
-
-            return ResponseDto;
+            
         }
     }
 }

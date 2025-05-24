@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
 using Moviemo.Dtos;
 using Moviemo.Dtos.Comment;
@@ -10,140 +9,166 @@ namespace Moviemo.Services
 {
     public class CommentService : ICommentService
     {
+        private readonly ILogger<CommentService> _Logger;
+
         private readonly AppDbContext _Context;
 
-        public CommentService(AppDbContext Context)
+        public CommentService(AppDbContext Context, ILogger<CommentService> Logger)
         {
+            _Logger = Logger;
             _Context = Context;
         }
 
-        public async Task<List<CommentGetDto>> GetAllAsync()
+        public async Task<List<CommentGetDto>?> GetAllAsync()
         {
-            return await _Context.Comments
-                .Include(C => C.User)
-                .Include(C => C.Movie)
-                .Select(C => new CommentGetDto 
-                { 
-                    Id = C.Id,
-                    Body = C.Body,
-                    UserId = C.User.Id,
-                    MovieId = C.Movie.Id,
-                    CreatedAt = C.CreatedAt,
-                    UpdatedAt = C.UpdatedAt,
-                    DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
-                    UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
-                })
-                .ToListAsync();
+            _Logger.LogInformation("Tüm yorum bilgileri alınıyor...");
+
+            try
+            {
+                return await _Context.Comments
+                    .Include(C => C.User)
+                    .Include(C => C.Movie)
+                    .Select(C => new CommentGetDto
+                    {
+                        Id = C.Id,
+                        Body = C.Body,
+                        UserId = C.User.Id,
+                        MovieId = C.Movie.Id,
+                        CreatedAt = C.CreatedAt,
+                        UpdatedAt = C.UpdatedAt,
+                        DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
+                        UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
+                    })
+                    .ToListAsync();
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Tüm yorum bilgileri alınırken bir hata meydana geldi.");
+                return null;
+            }
         }
 
         public async Task<CommentGetDto?> GetByIdAsync(long Id)
         {
-            return await _Context.Comments
-                .Include(C => C.User)
-                .Include(C => C.Movie)
-                .Select(C => new CommentGetDto
+            _Logger.LogInformation("Comment ID'si {Id} olan yorum alınıyor...", Id);
+
+            try
+            {
+                return await _Context.Comments
+                    .Include(C => C.User)
+                    .Include(C => C.Movie)
+                    .Select(C => new CommentGetDto
+                    {
+                        Id = C.Id,
+                        Body = C.Body,
+                        UserId = C.User.Id,
+                        MovieId = C.Movie.Id,
+                        CreatedAt = C.CreatedAt,
+                        UpdatedAt = C.UpdatedAt,
+                        DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
+                        UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
+                    })
+                    .FirstOrDefaultAsync(C => C.Id == Id);
+            } catch (Exception Ex) 
+            {
+                _Logger.LogError(Ex, "Comment ID'si {Id} olan yorum alınırken bir hata meydana geldi.", Id);
+                return null;
+            }
+        }
+
+        public async Task<CommentCreateDto?> CreateAsync(CommentCreateDto Dto, long UserId)
+        {
+            _Logger.LogInformation("Yeni yorum oluşturuluyor: {@CommentCreateDto}", Dto);
+
+            try
+            {
+                var Comment = new Comment
                 {
-                    Id = C.Id,
-                    Body = C.Body,
-                    UserId = C.User.Id,
-                    MovieId = C.Movie.Id,
-                    CreatedAt = C.CreatedAt,
-                    UpdatedAt = C.UpdatedAt,
-                    DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
-                    UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
-                })
-                .FirstOrDefaultAsync(C => C.Id == Id);
+                    Body = Dto.Body,
+                    UserId = UserId,
+                    MovieId = Dto.MovieId
+                };
+
+                await _Context.Comments.AddAsync(Comment);
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("Yorum başarıyla oluşturuldu.");
+
+                return Dto;
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Yorum oluşturulurken bir hata meydana geldi.");
+                return null; 
+            }
         }
 
-        public async Task<CommentCreateDto> CreateAsync(CommentCreateDto Dto)
+        public async Task<UpdateResponseDto?> UpdateAsync(long Id, long UserId, CommentUpdateDto Dto)
         {
-            var Comment = new Comment
+            _Logger.LogInformation("Comment ID'si {Id} olan yorum güncelleniyor: {@CommentUpdateDto}", Id, Dto);
+
+            try
             {
-                Body = Dto.Body,
-                UserId = Dto.UserId,
-                MovieId = Dto.MovieId
-            };
+                var Comment = await _Context.Comments.FindAsync(Id);
 
-            await _Context.Comments.AddAsync(Comment);
-            await _Context.SaveChangesAsync();
+                if (Comment == null)
+                    return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
 
-            return Dto;
+                var DtoProperties = Dto.GetType().GetProperties();
+                var CommentType = Comment.GetType();
+
+                /* CommentUpdateDto'nun tek propertysi var ancak uygulamanın 
+                 * scalable olması için böyle bıraktım */
+                foreach (var Property in DtoProperties)
+                {
+                    var NewValue = Property.GetValue(Dto);
+                    if (NewValue == null) continue;
+
+                    var TargetProperty = CommentType.GetProperty(Property.Name);
+                    if (TargetProperty == null || !TargetProperty.CanWrite) continue;
+
+                    TargetProperty.SetValue(Comment, NewValue);
+                }
+
+                Comment.UpdatedAt = DateTime.UtcNow;
+
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("Comment ID'si {Id} olan yorum başarıyla güncellendi.", Id);
+
+                return new UpdateResponseDto { IsUpdated = true };
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Yorum güncellenirken bir hata meydana geldi.");
+                return null;
+            }
         }
 
-        public async Task<UpdateResponseDto> UpdateAsync(long Id, long UserId, CommentUpdateDto Dto)
+        public async Task<DeleteResponseDto?> DeleteAsync(long Id, long UserId)
         {
-            var ResponseDto = new UpdateResponseDto
-            {
-                IsUpdated = false,
-                Issue = UpdateIssue.None
-            };
+            _Logger.LogInformation("Comment ID'si {Id} olan yorum siliniyor...", Id);
 
-            var Comment = await _Context.Comments.FindAsync(Id);
+            try
+            {
+                var Comment = await _Context.Comments.FindAsync(Id);
 
-            if (Comment == null)
-            {
-                ResponseDto.Issue = UpdateIssue.NotFound;
-                return ResponseDto;
-            } 
-            
-            else if (Comment.UserId != UserId)
-            {
-                ResponseDto.Issue = UpdateIssue.Unauthorized;
-                return ResponseDto;
+                if (Comment == null)
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
+
+                _Context.Comments.Remove(Comment);
+                await _Context.SaveChangesAsync();
+
+
+                _Logger.LogInformation("Comment ID'si {Id} olan yorum başarıyla silindi.", Id);
+
+                return new DeleteResponseDto { IsDeleted = true };
             }
-
-            var DtoProperties = Dto.GetType().GetProperties();
-            var CommentType = Comment.GetType();
-
-            /* CommentUpdateDto'nun tek propertysi var ancak uygulamanın 
-             * scalable olması için böyle bıraktım */
-            foreach (var Property in DtoProperties)
+            catch (Exception Ex)
             {
-                var NewValue = Property.GetValue(Dto);
-                if (NewValue == null) continue;
-
-                var TargetProperty = CommentType.GetProperty(Property.Name);
-                if (TargetProperty == null || !TargetProperty.CanWrite) continue;
-
-                TargetProperty.SetValue(Comment, NewValue);
+                _Logger.LogError(Ex, "Yorum silinirken bir hata meydana geldi.");
+                return null;
             }
-
-            Comment.UpdatedAt = DateTime.UtcNow;
-            
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsUpdated = true;
-
-            return ResponseDto;
-        }
-
-        public async Task<DeleteResponseDto> DeleteAsync(long Id, long UserId)
-        {
-            var ResponseDto = new DeleteResponseDto { 
-                IsDeleted = false,
-                Issue = DeleteIssue.None
-            };
-
-            var Comment = await _Context.Comments.FindAsync(Id);
-
-            if (Comment == null)
-            {
-                ResponseDto.Issue = DeleteIssue.NotFound;
-                return ResponseDto;
-            }
-
-            else if (Comment.UserId != UserId)
-            {
-                ResponseDto.Issue = DeleteIssue.Unauthorized;
-                return ResponseDto;
-            }
-
-            _Context.Comments.Remove(Comment);
-            await _Context.SaveChangesAsync();
-
-            ResponseDto.IsDeleted = true;
-
-            return ResponseDto;
         }
     }
 }

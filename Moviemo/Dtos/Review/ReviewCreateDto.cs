@@ -6,8 +6,6 @@ namespace Moviemo.Dtos.Review
     {
         public required string Body { get; set; }
 
-        public required long UserId { get; set; }
-
         public required long MovieId { get; set; }
 
         public required double UserScore { get; set; }
