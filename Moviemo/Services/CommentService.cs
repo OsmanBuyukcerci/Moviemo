@@ -28,6 +28,7 @@ namespace Moviemo.Services
                 return await _Context.Comments
                     .Include(C => C.User)
                     .Include(C => C.Movie)
+                    .Include(C => C.Votes)
                     .Select(C => new CommentGetDto
                     {
                         Id = C.Id,
@@ -76,6 +77,31 @@ namespace Moviemo.Services
             }
         }
 
+        public async Task<List<CommentGetDto>?> GetByMovieIdAsync(long? MovieId)
+        {
+            _Logger.LogInformation("Filme ait tüm yorum bilgileri alınıyor...");
+
+            try
+            {
+                return await _Context.Comments.Where(C => C.MovieId == MovieId).Select(C => new CommentGetDto
+                {
+                    Id = C.Id,
+                    Body = C.Body,
+                    UserId = C.User.Id,
+                    MovieId = C.Movie.Id,
+                    CreatedAt = C.CreatedAt,
+                    UpdatedAt = C.UpdatedAt,
+                    DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
+                    UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
+                }).ToListAsync();
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError("Filme ait tüm yorum bilgileri alınırken bir sorun meydana geldi.");
+                return null;
+            }
+        }
+
         public async Task<CommentCreateDto?> CreateAsync(CommentCreateDto Dto, long UserId)
         {
             _Logger.LogInformation("Yeni yorum oluşturuluyor: {@CommentCreateDto}", Dto);
@@ -107,14 +133,17 @@ namespace Moviemo.Services
         {
             _Logger.LogInformation("Comment ID'si {Id} olan yorum güncelleniyor: {@CommentUpdateDto}", Id, Dto);
 
-            try
-            {
+            try 
+            { 
                 var Comment = await _Context.Comments.FindAsync(Id);
 
                 if (Comment == null)
                     return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
 
-                var DtoProperties = Dto.GetType().GetProperties();
+                if (Comment.UserId != UserId)
+                    return new UpdateResponseDto { Issue = UpdateIssue.NotOwner };
+
+                    var DtoProperties = Dto.GetType().GetProperties();
                 var CommentType = Comment.GetType();
 
                 /* CommentUpdateDto'nun tek propertysi var ancak uygulamanın 
@@ -155,6 +184,9 @@ namespace Moviemo.Services
 
                 if (Comment == null)
                     return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
+
+                if (Comment.UserId != UserId)
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotOwner  };
 
                 _Context.Comments.Remove(Comment);
                 await _Context.SaveChangesAsync();

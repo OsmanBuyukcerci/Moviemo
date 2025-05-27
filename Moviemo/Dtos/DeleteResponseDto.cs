@@ -10,5 +10,6 @@
     {
         None,
         NotFound,
+        NotOwner
     }
 }

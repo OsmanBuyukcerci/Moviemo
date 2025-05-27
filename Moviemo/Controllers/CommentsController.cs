@@ -21,9 +21,17 @@ namespace Moviemo.Controllers
 
         // api/comments -> Tüm yorum bilgilerini al
         [HttpGet]
-        public async  Task<IActionResult> GetAllComments()
+        public async  Task<IActionResult> GetAllComments([FromQuery] long? MovieId)
         {
-            var Comments = await _CommentService.GetAllAsync();
+            var Comments = new List<CommentGetDto>() { };
+
+            if (MovieId != null)
+            {
+                Comments = await _CommentService.GetByMovieIdAsync(MovieId);
+            } else
+            {
+                Comments = await _CommentService.GetAllAsync();
+            }
 
             if (Comments == null) 
                 return StatusCode(500, "Tüm film bilgileri alınırken bir sunucu hatası meydana geldi.");
@@ -75,7 +83,8 @@ namespace Moviemo.Controllers
 
             return ResponseDto.Issue switch
             {
-                UpdateIssue.NotFound => NotFound($"Comment ID'si {Id} olan comment bulunamadı"),
+                UpdateIssue.NotFound => NotFound($"Comment ID'si {Id} olan comment bulunamadı."),
+                UpdateIssue.NotOwner => Unauthorized("Size ait olmayan bir yorumu güncelleyemezsiniz."),
                 _ => BadRequest("Yorum güncelleme işlemi gerçekleştirilemedi.")
             };
         }
@@ -98,6 +107,7 @@ namespace Moviemo.Controllers
             return ResponseDto.Issue switch
             {
                 DeleteIssue.NotFound => NotFound("Silinmek istenen yorum bulunamadı."),
+                DeleteIssue.NotOwner => Unauthorized("Size ait olmayan bir yorumu silemezsiniz."),
                 _ => BadRequest("Yorum silme işlemi gerçekleştirilemedi.")
             };
         }

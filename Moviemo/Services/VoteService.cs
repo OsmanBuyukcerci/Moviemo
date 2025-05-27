@@ -112,6 +112,9 @@ namespace Moviemo.Services
                 if (Vote == null)
                     return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
 
+                if (Vote.UserId != UserId)
+                    return new UpdateResponseDto() { Issue = UpdateIssue.NotOwner };
+
                 var DtoProperties = Dto.GetType().GetProperties();
                 var VoteType = Vote.GetType();
 
@@ -149,6 +152,9 @@ namespace Moviemo.Services
 
                 if (Vote == null)
                     return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
+
+                if (Vote.UserId != UserId)
+                    return new DeleteResponseDto() { Issue = DeleteIssue.NotOwner };
 
                 _Context.Votes.Remove(Vote);
 

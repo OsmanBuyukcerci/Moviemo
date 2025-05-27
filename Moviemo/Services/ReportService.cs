@@ -107,6 +107,9 @@ namespace Moviemo.Services
                 if (Report == null)
                     return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
 
+                if (Report.UserId !=  UserId)
+                    return new UpdateResponseDto { Issue = UpdateIssue.NotOwner };
+
                 var DtoProperties = Dto.GetType().GetProperties();
                 var ReportType = Report.GetType();
 
@@ -144,6 +147,9 @@ namespace Moviemo.Services
 
                 if (Report == null)
                     return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
+
+                if (Report.UserId != UserId)
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotOwner };
 
                 _Context.Reports.Remove(Report);
                 await _Context.SaveChangesAsync();

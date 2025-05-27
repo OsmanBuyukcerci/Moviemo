@@ -21,9 +21,19 @@ namespace Moviemo.Controllers
 
         // api/reviews -> Tüm inceleme bilgilerini al
         [HttpGet]
-        public async Task<IActionResult> GetAllReviews()
+        public async Task<IActionResult> GetAllReviews([FromQuery] long? MovieId)
         {
-            var Reviews = await _ReviewService.GetAllAsync();
+            var Reviews = new List<ReviewGetDto> { };
+
+            if (MovieId != null)
+            {
+                Reviews = await _ReviewService.GetByMovieIdAsync(MovieId);
+
+            }
+            else
+            {
+                Reviews = await _ReviewService.GetAllAsync();
+            }
 
             if (Reviews == null)
                 return StatusCode(500, "Tüm rapor bilgileri alınırken bir hata meydana geldi");
@@ -76,6 +86,7 @@ namespace Moviemo.Controllers
             return ResponseDto.Issue switch
             {
                 UpdateIssue.NotFound => NotFound($"Review ID'si {Id} olan inceleme bulunamadı."),
+                UpdateIssue.NotOwner => Unauthorized("Size ait olmayan bir incelemeyi güncelleyemezsiniz."),
                 _ => BadRequest("İnceleme güncelleme işlemi gerçekleştirilemedi.")
             };
         }
@@ -98,6 +109,7 @@ namespace Moviemo.Controllers
             return ResponseDto.Issue switch
             { 
                 DeleteIssue.NotFound => NotFound($"Review ID'si {Id} olan inceleme bulunamadı."),
+                DeleteIssue.NotOwner => Unauthorized("Size ait olmayan bir incelemeyi silemezsiniz."),
                 _ => BadRequest("İnceleme silme işlemi gerçekleştirilemedi.")
             };
         }

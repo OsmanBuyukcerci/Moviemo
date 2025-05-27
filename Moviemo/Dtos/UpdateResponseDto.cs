@@ -10,6 +10,7 @@
     {
         None,
         NotFound,
-        SameContent
+        SameContent,
+        NotOwner
     }
 }

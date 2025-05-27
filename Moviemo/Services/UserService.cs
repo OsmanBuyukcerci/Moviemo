@@ -174,6 +174,9 @@ namespace Moviemo.Services
                 if (User == null)
                     return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
 
+                if (User.Id != UserId)
+                    return new UpdateResponseDto { Issue = UpdateIssue.NotOwner };
+
                 var DtoProperties = Dto.GetType().GetProperties();
                 var UserType = User.GetType();
 
@@ -228,6 +231,9 @@ namespace Moviemo.Services
 
                 if (User == null)
                     return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
+
+                if (User.Id != UserId)
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotOwner };
 
                 _Context.Users.Remove(User);
                 await _Context.SaveChangesAsync();

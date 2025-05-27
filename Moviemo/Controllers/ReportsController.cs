@@ -78,6 +78,7 @@ namespace Moviemo.Controllers
             return ResponseDto.Issue switch
             { 
                 UpdateIssue.NotFound => NotFound($"Report ID'si {Id} olan rapor bulunamadı."),
+                UpdateIssue.NotOwner => Unauthorized("Size ait olmayan bir incelemeyi güncelleyemezsiniz."),
                 _ => BadRequest("Rapor güncelleme işlemi gerçekleştirilemedi.")
             };
         }
@@ -100,6 +101,7 @@ namespace Moviemo.Controllers
             return ResponseDto.Issue switch
             {
                 DeleteIssue.NotFound => NotFound($"Report ID'si {Id} olan rapor bulunamadı."),
+                DeleteIssue.NotOwner => Unauthorized("Size ait olmayan bir incelemeyi silemezsiniz."),
                 _ => BadRequest("Rapor silme işlemi gerçekleştirilemedi.")
             };
         }

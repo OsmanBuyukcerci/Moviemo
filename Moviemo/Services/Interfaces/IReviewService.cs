@@ -7,6 +7,7 @@ namespace Moviemo.Services.Interfaces
     {
         Task<List<ReviewGetDto>?> GetAllAsync();
         Task<ReviewGetDto?> GetByIdAsync(long Id);
+        Task<List<ReviewGetDto>?> GetByMovieIdAsync(long? MovieId);
         Task<ReviewCreateDto?> CreateAsync(ReviewCreateDto Dto, long UserId);
         Task<UpdateResponseDto?> UpdateAsync(long Id, long UserId, ReviewUpdateDto Dto);
         Task<DeleteResponseDto?> DeleteAsync(long Id, long UserId);

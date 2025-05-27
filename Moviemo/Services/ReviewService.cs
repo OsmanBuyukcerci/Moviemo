@@ -73,6 +73,30 @@ namespace Moviemo.Services
             }
         }
 
+        public async Task<List<ReviewGetDto>?> GetByMovieIdAsync(long? MovieId)
+        {
+            _Logger.LogInformation("Filme ait tüm incelemeler alınıyor...");
+
+            try
+            {
+                return await _Context.Reviews.Where(R => R.MovieId == MovieId).Select(R => new ReviewGetDto
+                {
+                    Id = R.Id,
+                    Body = R.Body,
+                    UserId = R.User.Id,
+                    MovieId = R.Movie.Id,
+                    UserScore = R.UserScore,
+                    CreatedAt = R.CreatedAt,
+                    UpdatedAt = R.UpdatedAt
+                }).ToListAsync();
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError("Filme ait incelemeler alınırken bir sorun meydana geldi.");
+                return null;
+            }
+        }
+
         public async Task<ReviewCreateDto?> CreateAsync(ReviewCreateDto Dto, long UserId)
         {
             _Logger.LogInformation("Yeni inceleme oluşturuluyor: {@ReviewCreateDto}", Dto);
@@ -114,6 +138,9 @@ namespace Moviemo.Services
                 if (Review == null)
                     return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
 
+                if (Review.UserId !=  UserId)
+                    return new UpdateResponseDto { Issue = UpdateIssue.NotOwner };
+
                 var DtoProperties = Dto.GetType().GetProperties();
                 var ReviewType = Review.GetType();
 
@@ -153,6 +180,9 @@ namespace Moviemo.Services
 
                 if (Review == null)
                     return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
+
+                if (Review.UserId != UserId)
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotOwner };
 
                 _Context.Reviews.Remove(Review);
                 await _Context.SaveChangesAsync();

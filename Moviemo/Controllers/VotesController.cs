@@ -82,6 +82,7 @@ namespace Moviemo.Controllers
             return ResponseDto.Issue switch
             {
                 UpdateIssue.NotFound => NotFound($"Vote ID'si {Id} olan oy bulunamadı."),
+                UpdateIssue.NotOwner => Unauthorized("Size ait olmayan bir oyu güncelleyemezsiniz."),
                 _ => BadRequest("Oy güncelleme işlemi gerçekleştirilemedi.")
             };
         }
@@ -104,6 +105,7 @@ namespace Moviemo.Controllers
             return ResponseDto.Issue switch
             {
                 DeleteIssue.NotFound => NotFound($"Vote ID'si {Id} olan oy bulunamadı."),
+                DeleteIssue.NotOwner => Unauthorized("Size ait olmayan bir oyu silemezsiniz."),
                 _ => BadRequest("Oy silme işlemi gerçekleştirilemedi.")
             };
         }

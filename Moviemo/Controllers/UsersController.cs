@@ -82,6 +82,7 @@ namespace Moviemo.Controllers
             { 
                 UpdateIssue.NotFound => NotFound($"User ID'si {Id} olan kullanıcı bulunamadı."),
                 UpdateIssue.SameContent => BadRequest("Kullanıcı adı kullanımda."),
+                UpdateIssue.NotOwner => Unauthorized("Size ait olmayan bir kullanıcı profilini güncelleyemezsiniz."),
                 _ => BadRequest("Kullanıcı güncelleme işlemi gerçekleştirilemedi.")
             };
         }
@@ -104,6 +105,7 @@ namespace Moviemo.Controllers
             return ResponseDto.Issue switch
             { 
                 DeleteIssue.NotFound => NotFound($"User ID'si {Id} olan kullanıcı bulunamadı."),
+                DeleteIssue.NotOwner => Unauthorized("Size ait olmayan bir kullanıcı profilini silemezsiniz."),
                 _ => BadRequest("Kullanıcı silme işlemi gerçekleştirilemedi.")
             };
         }
