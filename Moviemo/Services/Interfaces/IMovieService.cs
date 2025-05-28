@@ -11,5 +11,6 @@ namespace Moviemo.Services.Interfaces
         Task<MovieCreateDto?> CreateAsync(MovieCreateDto Dto);
         Task<UpdateResponseDto?> UpdateAsync(long Id, MovieUpdateDto Dto);
         Task<DeleteResponseDto?> DeleteAsync(long Id);
+        Task<List<SearchResponseDto>?> SearchAsync(string Query);
     }
 }

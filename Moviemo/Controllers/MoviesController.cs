@@ -93,5 +93,18 @@ namespace Moviemo.Controllers
                 _ => BadRequest("Film silme işlemi gerçekleştirilemedi.")
             };
         }
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchMovie([FromQuery] string Query)
+        {
+            var Results = await _MovieService.SearchAsync(Query);
+
+            if (Results == null)
+            {
+                return StatusCode(500, "Arama yapılırken bir sunucu hatası meydana geldi.");
+            }
+
+            return Ok(Results);
+        }
     }
 }

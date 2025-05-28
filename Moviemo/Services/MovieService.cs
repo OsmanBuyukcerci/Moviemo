@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Moviemo.Data;
 using Moviemo.Dtos;
 using Moviemo.Dtos.Comment;
@@ -206,6 +207,33 @@ namespace Moviemo.Services
                 _Logger.LogError(Ex, "Film silinirken bir hata meydana geldi.");
                 return null;
             }
+        }
+
+        [HttpGet("search")]
+        public async Task<List<SearchResponseDto>?> SearchAsync(string Query)
+        {
+            _Logger.LogInformation("{Query} başlığı aranıyor...", Query);
+
+            try
+            {
+                var Results = await _Context.Movies
+                    .Where(M => M.Title.Contains(Query))
+                    .Select(M => new SearchResponseDto
+                    {
+                        Id = M.Id,
+                        Title = M.Title,
+                        PosterPath = M.PosterPath
+                    })
+                    .ToListAsync();
+
+                return Results;
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Arama yapılırken bir hata meydana geldi.");
+                return null;
+            }
+
         }
     }
 }
