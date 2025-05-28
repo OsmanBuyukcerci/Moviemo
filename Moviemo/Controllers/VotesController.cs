@@ -20,8 +20,18 @@ namespace Moviemo.Controllers
 
         // api/votes -> Tüm oy bilgilerini al
         [HttpGet]
-        public async Task<IActionResult> GetAllVotes()
+        public async Task<IActionResult> GetAllVotes([FromQuery] long? UserId, [FromQuery] long? CommentId)
         {
+            if (UserId != null && CommentId != null)
+            {
+                var Vote = await _VoteService.GetByUserAndCommentIdAsync(UserId, CommentId);
+
+                if (Vote == null)
+                    return Ok(new {id=-1, voteType=-2});
+
+                return Ok(Vote);
+            }
+
             var Votes = await _VoteService.GetAllAsync();
 
             if (Votes == null)

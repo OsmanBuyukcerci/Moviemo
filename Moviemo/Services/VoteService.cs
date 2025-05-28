@@ -69,6 +69,27 @@ namespace Moviemo.Services
             }
         }
 
+        public async Task<VoteGetDto?> GetByUserAndCommentIdAsync(long? UserId, long? CommentId)
+        {
+            _Logger.LogInformation("User ID'si {UserId} Comment ID'si {CommentId} olan oy alınıyor...", UserId, CommentId);
+
+            try
+            {
+                return await _Context.Votes.Where(V => V.UserId == UserId).Where(V => V.CommentId == CommentId).Select(V => new VoteGetDto
+                {
+                    Id = V.Id,
+                    UserId = V.User.Id,
+                    CommentId = V.Comment.Id,
+                    VoteType = V.VoteType
+                }).FirstOrDefaultAsync();
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError("Filme ait tüm yorum bilgileri alınırken bir sorun meydana geldi.");
+                return null;
+            }
+        }
+
         public async Task<CreateResponseDto?> CreateAsync(VoteCreateDto Dto, long UserId)
         {
             _Logger.LogInformation("Yeni oy oluşturuluyor: {@VoteCreateDto}", Dto);
@@ -76,11 +97,6 @@ namespace Moviemo.Services
             try
             {
                 var User = await _Context.Users.Include(U => U.Votes).FirstOrDefaultAsync(U => U.Id == UserId);
-
-                bool HasVoted = User!.Votes.Any(V => V.CommentId == Dto.CommentId);
-
-                if (HasVoted)
-                    return new CreateResponseDto { Issue = CreateIssue.SameContent };
 
                 var Vote = new Vote
                 {
