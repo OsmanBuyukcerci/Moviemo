@@ -54,7 +54,7 @@ namespace Moviemo.Controllers
                 return StatusCode(500, "Kullanıcı oluşturulurken bir sunucu hatası meydana geldi.");
 
             if (ResponseDto.IsCreated)
-                return Ok(Dto);
+                return Ok(ResponseDto);
 
             return ResponseDto.Issue switch
             {
