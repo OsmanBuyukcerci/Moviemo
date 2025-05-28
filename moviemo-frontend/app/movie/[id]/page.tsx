@@ -317,11 +317,7 @@ export default function MoviePage() {
       {/* Movie Details */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
         {/* Poster */}
-<<<<<<< HEAD
         <div className="">
-=======
-        <div className="relative">
->>>>>>> 22c98db6232c226855ceae49918a273d2c71c38f
           <img
             src={movie?.posterPath}
             alt={movie?.title}
