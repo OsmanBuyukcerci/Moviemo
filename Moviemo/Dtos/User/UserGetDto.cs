@@ -12,7 +12,7 @@ namespace Moviemo.Dtos.User
         public required string Username { get; set; }
         public required string Email { get; set; }
         public UserRole UserRole { get; set; }
-        public required ICollection<ReviewGetDto> Reviews { get; set; }
-        public required ICollection<CommentGetDto> Comments { get; set; } 
+        public ICollection<ReviewGetDto> Reviews { get; set; } = new List<ReviewGetDto>();
+        public ICollection<CommentGetDto> Comments { get; set; } = new List<CommentGetDto>();
     }
 }

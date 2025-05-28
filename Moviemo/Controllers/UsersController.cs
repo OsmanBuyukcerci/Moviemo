@@ -23,8 +23,20 @@ namespace Moviemo.Controllers
 
         // api/users -> Tüm kullanıcı bilgilerini al
         [HttpGet]
-        public async Task<IActionResult> GetAllUsers()
+        public async Task<IActionResult> GetAllUsers([FromQuery] string? Username)
         {
+            if (Username != null)
+            {
+                var User = await _UserService.GetByUsernameAsync(Username);
+
+                if (User == null)
+                {
+                    return StatusCode(500, "Kullanıcı bilgisi alınırken bir sunucu hatası meydana geldi.");
+                }
+
+                return Ok(User);
+            }
+
             var Users = await _UserService.GetAllAsync();
 
             if (Users == null)

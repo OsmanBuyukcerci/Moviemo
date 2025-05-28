@@ -126,6 +126,29 @@ namespace Moviemo.Services
             }
         }
 
+        public async Task<UserGetDto?> GetByUsernameAsync(string Username)
+        {
+            _Logger.LogInformation("Kullanıcı adı {Username} olan kullanıcı bilgisi alınıyor...", Username);
+
+            try
+            {
+                return await _Context.Users.Where(U => U.Username == Username).Select(U => new UserGetDto
+                {
+                    Id = U.Id,
+                    Name = U.Name,
+                    Surname = U.Surname,
+                    Username = U.Username,
+                    Email = U.Email,
+                    UserRole = U.UserRole
+                }).FirstOrDefaultAsync();
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Kullanıcı bilgisi alınırken bir hata meydana geldi.");
+                return null;
+            }
+        }
+
         public async Task<CreateResponseDto?> CreateAsync(UserCreateDto Dto)
         {
             _Logger.LogInformation("Yeni kullanıcı oluşturuluyor: {@UserCreateDto}", Dto);
@@ -270,6 +293,7 @@ namespace Moviemo.Services
 
                 return new LoginResponseDto 
                 { 
+                    Username = Dto.Username,
                     IsLoggedIn = true , 
                     TokenResponse = await _TokenService.CreateTokenResponseAsync(User) 
                 };
