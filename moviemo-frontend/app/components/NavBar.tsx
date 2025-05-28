@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-<<<<<<< HEAD
 import { useEffect, useState, useRef } from 'react';
 import { apiService } from '../services/api';
 
@@ -11,16 +10,13 @@ interface SearchResult {
   posterPath: string;
 }
 
-=======
 import { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
 
->>>>>>> 22c98db6232c226855ceae49918a273d2c71c38f
 export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [firstLetterOfUsername, setFirstLetterOfUsername] = useState<string>("");
-<<<<<<< HEAD
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -31,15 +27,12 @@ export default function Navbar() {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const searchApiUrl = 'https://localhost:7179/api/movies/search?Query='
-=======
->>>>>>> 22c98db6232c226855ceae49918a273d2c71c38f
 
   const handleLogout = () => {
     // Clear tokens and username from localStorage
     apiService.logout();
     setIsDropdownOpen(false);
     setIsLoggedIn(false);
-<<<<<<< HEAD
     setIsMobileMenuOpen(false);
   };
 
@@ -117,19 +110,13 @@ export default function Navbar() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  // Check if user is logged in by verifying token existence and expiration
-=======
   };
 
-    // Check if user is logged in by verifying token existence and expiration
->>>>>>> 22c98db6232c226855ceae49918a273d2c71c38f
   useEffect(() => {
     setIsLoggedIn(apiService.isAuthenticated());
     setFirstLetterOfUsername(localStorage.getItem('username')?.charAt(0).toUpperCase()!)
   }, []);
 
-<<<<<<< HEAD
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -152,14 +139,11 @@ export default function Navbar() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-=======
->>>>>>> 22c98db6232c226855ceae49918a273d2c71c38f
   if (isLoggedIn === null) {
     return null;
   }
 
   return (
-<<<<<<< HEAD
     <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white shadow-2xl backdrop-blur-md border-b border-gray-700/50">
       <div className="container mx-auto px-4 sm:px-6 py-4">
         {/* Desktop Navigation */}
@@ -450,7 +434,6 @@ export default function Navbar() {
       </div>
     </nav>
   );
-=======
   <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white shadow-2xl backdrop-blur-md border-b border-gray-700/50">
     <div className="container mx-auto px-6 py-4">
       <div className="flex justify-between items-center">
@@ -535,5 +518,4 @@ export default function Navbar() {
     </div>
   </nav>
 );
->>>>>>> 22c98db6232c226855ceae49918a273d2c71c38f
 }
