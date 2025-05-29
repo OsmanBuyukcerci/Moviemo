@@ -227,6 +227,16 @@ export default function ProfilePage() {
             <p className="text-gray-300 text-center">Kullanıcı verisi bulunamadı</p>
           )}
 
+          {/* Password Change Button */}
+          <div className="mt-6">
+            <Link
+              href={`/profile/${id}/change-password`}
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105"
+            >
+              Parola Değiştir
+            </Link>
+          </div>
+
           {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-gray-300">
