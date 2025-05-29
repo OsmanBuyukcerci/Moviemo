@@ -137,6 +137,10 @@ export default function MoviePage() {
   };
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
+    if (!apiService.isAuthenticated()) {
+      window.location.href = '/login';
+    }
+
     e.preventDefault();
     try {
       await fetch(commentsApiUrl, {
