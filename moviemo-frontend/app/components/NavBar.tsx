@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { apiService } from '../services/api';
+import { getCurrentUserId } from '../utils/user';
 
 interface SearchResult {
   id: number;
@@ -20,6 +21,7 @@ export default function Navbar() {
   const [isSearching, setIsSearching] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(-1);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -93,6 +95,17 @@ export default function Navbar() {
     // Navigate to movie detail page
     window.location.href = `/movie/${movieId}`;
   };
+
+  useEffect(() => {
+    const getAndSetCurrentUserId = async () => {
+      const id = await getCurrentUserId();
+      if (id != null) {
+        setCurrentUserId(id);
+      }
+    }
+
+    getAndSetCurrentUserId();
+  })
 
   // Handle click outside search to close results
   useEffect(() => {
@@ -255,7 +268,7 @@ export default function Navbar() {
                   <div className="absolute right-0 mt-2 w-56 bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-2xl border border-gray-700/50 z-[9999] overflow-hidden">
                     <div className="p-2">
                       <Link
-                        href="/profile"
+                        href={"/profile" + "/" + currentUserId}
                         className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200"
                         onClick={() => setIsDropdownOpen(false)}
                       >
@@ -397,7 +410,7 @@ export default function Navbar() {
               {isLoggedIn ? (
                 <>
                   <Link
-                    href="/profile"
+                    href={"/profile" + "/" + currentUserId}
                     className="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors duration-200 px-2 py-2"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >

@@ -8,6 +8,7 @@ import { Comment } from '@/app/types/comment';
 import { apiService } from '@/app/services/api';
 import { VoteType } from '@/app/types/vote';
 import { Vote, Edit, Trash2 } from 'lucide-react';
+import { getCurrentUserId } from '@/app/utils/user';
 
 export default function MoviePage() {
   const { id } = useParams();
@@ -285,11 +286,7 @@ export default function MoviePage() {
 
     const getAndSetCurrentUserId = async () => {
       try {
-          const response = await fetch(usersApiUrl + '?username=' + localStorage.getItem('username'), {
-          headers: apiService.getHeaders()
-        })
-        
-        const { id } = await response.json();
+        const id = await getCurrentUserId();
 
         if (id != null) {
           setCurrentUserId(id);
