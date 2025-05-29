@@ -88,7 +88,8 @@ namespace Moviemo.Controllers
             if (ResponseDto == null)
                 return StatusCode(500, "Kullanıcı güncellenirken bir sunucu hatası meydana geldi.");
 
-            if (ResponseDto.IsUpdated) Ok(Dto);
+            if (ResponseDto.IsUpdated)
+                return Ok(Dto);
 
             return ResponseDto.Issue switch
             { 
