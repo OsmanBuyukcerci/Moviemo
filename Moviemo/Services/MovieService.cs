@@ -235,5 +235,46 @@ namespace Moviemo.Services
             }
 
         }
+
+        public async Task<MoviePageDto?> GetByPageSizeAsync(int PageIndex, int PageSize)
+        {
+            _Logger.LogInformation("Sayfa: {PageIndex} - Adet: {PageSize} alınıyor...", PageIndex, PageSize);
+
+            try
+            {
+                if (PageIndex <= 0 || PageSize <= 0)
+                {
+                    throw new Exception("Sayfa Numarası veya Sayfa Boyutu hatalı girildi.");
+                }
+
+                var TotalMovies = await _Context.Movies.CountAsync();
+
+                var Movies = await _Context.Movies
+                    .Skip((PageIndex - 1) * PageSize)
+                    .Take(PageSize)
+                    .Select(M => new MovieGetDto
+                    {
+                        Id = M.Id,
+                        Title = M.Title,
+                        Overview = M.Overview,
+                        PosterPath = M.PosterPath,
+                        TrailerUrl = M.TrailerUrl
+                    })
+                    .ToListAsync();
+                    
+                return new MoviePageDto
+                {
+                    Data = Movies,
+                    Total = TotalMovies,
+                    PageSize = PageSize,
+                    PageIndex = PageIndex
+                };
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Sayfa bilgisi alınırken bir hata meydana geldi.");
+                return null;
+            }
+        }
     }
 }

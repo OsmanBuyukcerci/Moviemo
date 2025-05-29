@@ -21,8 +21,20 @@ namespace Moviemo.Controllers
 
         // api/movies -> Tüm film bilgilerini al
         [HttpGet]
-        public async Task<IActionResult> GetAllMovies()
+        public async Task<IActionResult> GetAllMovies([FromQuery] int? PageIndex, [FromQuery] int? PageSize)
         {
+            if (PageIndex != null && PageSize != null)
+            {
+                var Response = await _MovieService.GetByPageSizeAsync(PageIndex ?? -1, PageSize ?? -1);
+
+                if (Response == null)
+                {
+                    return StatusCode(500, "Sayfa bilgisi alınırken bir sunucu hatası meydana geldi.");
+                }
+
+                return Ok(Response);
+            }
+
             var Movies = await _MovieService.GetAllAsync();
 
             if (Movies == null)

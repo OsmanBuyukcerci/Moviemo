@@ -11,7 +11,7 @@ namespace Moviemo.Dtos.Movie
         public required string Overview { get; set; }
         public required string PosterPath { get; set; }
         public required string TrailerUrl { get; set; }
-        public required ICollection<ReviewGetDto> Reviews { get; set; }
-        public required ICollection<CommentGetDto> Comments { get; set; }
+        public ICollection<ReviewGetDto> Reviews { get; set; }
+        public ICollection<CommentGetDto> Comments { get; set; }
     }
 }

@@ -12,5 +12,6 @@ namespace Moviemo.Services.Interfaces
         Task<UpdateResponseDto?> UpdateAsync(long Id, MovieUpdateDto Dto);
         Task<DeleteResponseDto?> DeleteAsync(long Id);
         Task<List<SearchResponseDto>?> SearchAsync(string Query);
+        Task<MoviePageDto?> GetByPageSizeAsync(int PageIndex, int PageSize);
     }
 }
