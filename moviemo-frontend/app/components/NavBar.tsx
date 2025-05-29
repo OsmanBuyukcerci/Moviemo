@@ -27,6 +27,12 @@ export default function Navbar() {
 
   const searchApiUrl = 'https://localhost:7179/api/movies/search?Query='
 
+  const handleLogin = () => {
+    if (apiService.isAuthenticated()) {
+      setIsLoggedIn(true);
+    }
+  }
+
   const handleLogout = () => {
     // Clear tokens and username from localStorage
     apiService.logout();
@@ -152,6 +158,14 @@ export default function Navbar() {
   if (isLoggedIn === null) {
     return null;
   }
+
+  useEffect(() => {
+    window.addEventListener('userLoggedIn', handleLogin);
+
+    return () => {
+      window.removeEventListener('userLoggedIn', handleLogin);
+    }
+  })
 
   return (
     <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white shadow-2xl backdrop-blur-md border-b border-gray-700/50">

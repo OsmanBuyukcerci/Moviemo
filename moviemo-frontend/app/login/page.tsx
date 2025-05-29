@@ -37,6 +37,9 @@ export default function LoginPage() {
       const response = await apiService.login(formData);
       
       if (response.isLoggedIn) {
+        // Navigation bar için event dispatchle
+        window.dispatchEvent(new Event('userLoggedIn'));
+
         // Başarılı giriş - ana sayfaya yönlendir
         router.push('/');
       } else {
