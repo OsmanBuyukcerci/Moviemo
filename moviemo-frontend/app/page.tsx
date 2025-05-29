@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import MovieCard from './components/MovieCard';
+import PageSelector from './components/PageSelector';
+import { useSearchParams } from 'next/navigation';
 
 // Film veri tipi (MovieGetDto'ya uygun)
 interface Movie {
@@ -12,14 +14,19 @@ interface Movie {
 }
 
 export default function Home() {
+  const searchParams = useSearchParams();
+  const pageIndex = searchParams.get('pageIndex') ?? '1';
+  const pageSize = searchParams.get('pageSize') ?? '9';
+
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalMovieCount, setTotalMovieCount] = useState(0);
 
   useEffect(() => {
     const fetchMovies = async () => {
       try {
-        const response = await fetch('https://localhost:7179/api/movies', {
+        const response = await fetch('https://localhost:7179/api/movies?pageIndex=' + pageIndex + '&pageSize=' + pageSize, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -30,8 +37,10 @@ export default function Home() {
           throw new Error('Filmler yüklenirken hata oluştu');
         }
 
-        const data: Movie[] = await response.json();
+        const responseData = await response.json();
+        const data: Movie[] = responseData.data;
         setMovies(data);
+        setTotalMovieCount(responseData.total);
         setLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Bilinmeyen bir hata oluştu');
@@ -78,6 +87,7 @@ export default function Home() {
           <MovieCard key={movie.id} movie={movie} />
         ))}
       </div>
+      <div><PageSelector total={totalMovieCount} pageIndex={parseInt(pageIndex)} pageSize={parseInt(pageSize)} /></div>
     </div>
   );
 }
