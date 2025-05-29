@@ -160,5 +160,25 @@ namespace Moviemo.Controllers
 
             return Ok(Result);
         }
+
+        [Authorize]
+        [HttpPut("{Id}/change-password")]
+        public async Task<IActionResult> ChangePassword(long Id, [FromBody] ChangePasswordDto Dto)
+        {
+            if (!long.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var UserId))
+                return Unauthorized("Geçersiz kullanıcı token bilgisi.");
+
+            var ResponseDto = await _UserService.ChangePasswordAsync(Dto, Id, UserId);
+
+            if (ResponseDto == null)
+                return StatusCode(500, "Kullanıcı parolası değiştirilirken bir sunucu hatası meydana geldi.");
+
+            return ResponseDto.Issue switch
+            {
+                PasswordChangeIssue.None => Ok(ResponseDto),
+                PasswordChangeIssue.IncorrectOldPassword => BadRequest("Eski parola hatalı girildi."),
+                _ => BadRequest("Parola değiştirme işlemi gerçekleştirilmedi.")
+            };
+        }
     }
 }

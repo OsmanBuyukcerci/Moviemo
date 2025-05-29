@@ -311,5 +311,44 @@ namespace Moviemo.Services
 
             return Result;
         }
+
+        public async Task<PasswordChangeResponseDto> ChangePasswordAsync(ChangePasswordDto Dto, long Id, long UserId)
+        {
+            _Logger.LogInformation("User ID'si {Id} olan kullanıcı parolasını değiştiriyor...", UserId);
+
+            try
+            {
+                if (Id != UserId)
+                {
+                    return new PasswordChangeResponseDto { Issue = PasswordChangeIssue.Unauthorized };
+                }
+
+                var User = await _Context.Users.FindAsync(UserId);
+
+                if (User != null)
+                {
+                    if (new PasswordHasher<User>().VerifyHashedPassword(User, User.PasswordHash, Dto.OldPassword)
+                        == PasswordVerificationResult.Failed)
+                    {
+                        return new PasswordChangeResponseDto { Issue = PasswordChangeIssue.IncorrectOldPassword };
+                    }
+                }
+                var HashedNewPassword = new PasswordHasher<User>()
+                    .HashPassword(User, Dto.NewPassword);
+                
+                User.PasswordHash = HashedNewPassword;
+
+                await _Context.SaveChangesAsync();
+
+                _Logger.LogInformation("Kullanıcı parolası başarıyla değiştirildi.");
+
+                return new PasswordChangeResponseDto { };
+            }
+            catch (Exception Ex)
+            {
+                _Logger.LogError(Ex, "Kullanıcı parolası değiştirilirken bir hata meydana geldi.");
+                return null;
+            }
+        }
     }
 }

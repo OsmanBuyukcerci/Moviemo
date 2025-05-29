@@ -15,5 +15,6 @@ namespace Moviemo.Services.Interfaces
         Task<DeleteResponseDto?> DeleteAsync(long Id, long UserId);
         Task<LoginResponseDto?> LoginAsync(UserLoginDto Dto);
         Task<TokenResponseDto?> RefreshTokensAsync(long UserId, RefreshTokenRequestDto Dto);
+        Task<PasswordChangeResponseDto?> ChangePasswordAsync (ChangePasswordDto Dto, long Id, long UserId);
     }
 }
