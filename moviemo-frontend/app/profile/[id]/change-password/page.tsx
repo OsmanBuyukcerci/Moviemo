@@ -62,7 +62,7 @@ export default function ChangePasswordPage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
-        <div className="text-center">
+        <div className="text-center m-8">
           <h2 className="text-3xl font-extrabold text-white mb-2">
             Parola Değiştir
           </h2>
@@ -162,7 +162,7 @@ export default function ChangePasswordPage() {
         </div>
 
         {/* Additional Info */}
-        <div className="text-center">
+        <div className="m-8 text-center">
           <p className="text-gray-400 text-sm">
             Film severler için tasarlandı ❤️
           </p>

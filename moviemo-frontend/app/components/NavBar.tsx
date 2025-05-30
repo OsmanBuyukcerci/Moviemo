@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { apiService } from '../services/api';
-import { getCurrentUserId } from '../utils/user';
+import { getCurrentUserId, getCurrentUserRole } from '../utils/user'; // Import getUserRole
 
 interface SearchResult {
   id: number;
@@ -14,51 +14,56 @@ interface SearchResult {
 export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [firstLetterOfUsername, setFirstLetterOfUsername] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState(-1);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null); // Initialize with null
+  const [userRole, setUserRole] = useState<string | null>(null); // State for user role
+
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const searchApiUrl = 'https://localhost:7179/api/movies/search?Query='
+  const searchApiUrl = 'https://localhost:7179/api/movies/search?Query=';
 
-  const handleLogin = () => {
+  // Memoize handleLogin as it's used in a useEffect dependency array
+  const handleLogin = useCallback(() => {
     if (apiService.isAuthenticated()) {
       setIsLoggedIn(true);
     }
-  }
+  }, []); // No dependencies needed for setIsLoggedIn, apiService is an object
 
   const handleLogout = () => {
-    // Clear tokens and username from localStorage
     apiService.logout();
     setIsDropdownOpen(false);
     setIsLoggedIn(false);
     setIsMobileMenuOpen(false);
+    setCurrentUserId(null); // Reset user ID on logout
+    setUserRole(null); // Reset user role on logout
   };
 
-  // Search function
   const searchMovies = async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
       setShowSearchResults(false);
       return;
     }
-
     setIsSearching(true);
     try {
+      const token = localStorage.getItem('token'); // Get token for the request
+      if (!token) { // Early exit if no token, though search might be public
+        // Decide how to handle search without token if it's a protected route
+        // For now, let's assume it might proceed or your API handles it
+      }
       const response = await fetch(searchApiUrl + `${encodeURIComponent(query)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}` // Use the fetched token
         }
       });
-
       if (response.ok) {
         const results = await response.json();
         setSearchResults(results || []);
@@ -76,103 +81,100 @@ export default function Navbar() {
     }
   };
 
-  // Handle search input change with debounce
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
-
-    // Clear previous timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-
-    // Set new timeout for debounced search
     searchTimeoutRef.current = setTimeout(() => {
       searchMovies(query);
     }, 300);
   };
 
-  // Handle search result click
   const handleSearchResultClick = (movieId: number) => {
     setSearchQuery("");
     setShowSearchResults(false);
     setShowMobileSearch(false);
     setIsMobileMenuOpen(false);
-    // Navigate to movie detail page
-    window.location.href = `/movie/${movieId}`;
+    window.location.href = `/movie/${movieId}`; // Consider using Next.js Router for client-side navigation
   };
 
+  // Check auth status on mount and when 'userLoggedIn' event occurs
   useEffect(() => {
-    const getAndSetCurrentUserId = async () => {
-      const id = await getCurrentUserId();
-      if (id != null) {
+    setIsLoggedIn(apiService.isAuthenticated());
+
+    window.addEventListener('userLoggedIn', handleLogin);
+    return () => {
+      window.removeEventListener('userLoggedIn', handleLogin);
+    };
+  }, [handleLogin]); // Add handleLogin to dependency array
+
+  // Fetch user ID and role when login status changes
+  useEffect(() => {
+    const getAuthDetails = async () => {
+      if (isLoggedIn) {
+        const id = await getCurrentUserId();
         setCurrentUserId(id);
+        if (id !== null) { // Only fetch role if ID was successfully retrieved
+            const role = await getCurrentUserRole();
+            setUserRole(String(role));
+        } else {
+            setUserRole(null); // Clear role if ID couldn't be fetched
+        }
+      } else {
+        setCurrentUserId(null);
+        setUserRole(null);
       }
-    }
+    };
+    getAuthDetails();
+  }, [isLoggedIn]); // Runs when isLoggedIn state changes
 
-    getAndSetCurrentUserId();
-  })
-
-  // Handle click outside search to close results
+  // Handle click outside search
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowSearchResults(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, []); // Empty dependency array: runs once on mount
 
-  // Check if user is logged in by verifying token existence and expiration
-  useEffect(() => {
-    setIsLoggedIn(apiService.isAuthenticated());
-    setFirstLetterOfUsername(localStorage.getItem('username')?.charAt(0).toUpperCase()!)
-  }, []);
-
-  // Cleanup timeout on unmount
+  // Cleanup search timeout
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, []);
+  }, []); // Empty dependency array: runs once on mount
 
-  // Close mobile menu on resize
+  // Handle window resize for mobile menu
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
+      if (window.innerWidth >= 768) { // md breakpoint
         setIsMobileMenuOpen(false);
         setShowMobileSearch(false);
       }
     };
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, []); // Empty dependency array: runs once on mount
 
-  if (isLoggedIn === null) {
-    return null;
-  }
+  // Removed: if (isLoggedIn === null) { return null; }
+  // isLoggedIn is initialized to false, so it won't be null unless you change its type.
+  // The initial render will be based on isLoggedIn=false, which is fine.
+  // Client-side useEffect will then update it if necessary.
 
-  useEffect(() => {
-    window.addEventListener('userLoggedIn', handleLogin);
-
-    return () => {
-      window.removeEventListener('userLoggedIn', handleLogin);
-    }
-  })
+  const isAdmin = userRole === "1" || userRole === "2";
 
   return (
-    <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white shadow-2xl backdrop-blur-md border-b border-gray-700/50">
+    <nav className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white shadow-2xl backdrop-blur-md border-b border-gray-700/50 sticky top-0 z-50"> {/* z-index adjusted if needed */}
       <div className="container mx-auto px-4 sm:px-6 py-4">
-        {/* Desktop Navigation */}
         <div className="flex justify-between items-center">
-          {/* Logo */}
           <Link href="/" className="group flex items-center space-x-2 flex-shrink-0">
             <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-transform duration-200">
               <span className="text-white font-bold text-sm">M</span>
@@ -182,8 +184,8 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop Search Bar */}
           <div className="hidden md:flex flex-1 max-w-lg mx-8 relative" ref={searchRef}>
+            {/* ... Desktop Search Bar ... (no changes needed here based on request) */}
             <div className="relative w-full">
               <input
                 type="text"
@@ -203,10 +205,8 @@ export default function Navbar() {
                 )}
               </div>
             </div>
-
-            {/* Desktop Search Results */}
             {showSearchResults && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-2xl border border-gray-700/50 z-[9999] max-h-96 overflow-y-auto">
+             <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-2xl border border-gray-700/50 z-[60] max-h-96 overflow-y-auto"> {/* Ensure z-index is higher than nav if needed, but lower than dropdown */}
                 {searchResults.length > 0 ? (
                   <div className="p-2">
                     {searchResults.map((movie) => (
@@ -248,10 +248,18 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Desktop Navigation Items */}
           <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
-            <Link 
-              href="/about" 
+            {isLoggedIn && isAdmin && (
+              <Link
+                href="/admin"
+                className="relative px-3 py-2 text-gray-300 hover:text-white transition-colors duration-200 group"
+              >
+                Admin
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-red-500 to-pink-600 group-hover:w-full transition-all duration-300"></span>
+              </Link>
+            )}
+            <Link
+              href="/about"
               className="relative px-3 py-2 text-gray-300 hover:text-white transition-colors duration-200 group"
             >
               Hakkımızda
@@ -264,42 +272,33 @@ export default function Navbar() {
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center space-x-2 px-4 py-2 bg-gray-700/50 hover:bg-gray-600/50 rounded-lg border border-gray-600/50 hover:border-gray-500/50 transition-all duration-200 backdrop-blur-sm"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                    <span className="text-white text-sm font-medium">{firstLetterOfUsername}</span>
-                  </div>
                   <span className="text-gray-300 hidden lg:block">Hesap</span>
-                  <svg 
+                  <svg
                     className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
                 
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-2xl border border-gray-700/50 z-[9999] overflow-hidden">
+                {isDropdownOpen && currentUserId !== null && ( // Check currentUserId is not null before rendering link
+                  <div className="absolute right-0 mt-2 w-56 bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-2xl border border-gray-700/50 z-[70] overflow-hidden"> {/* z-index higher than search results */}
                     <div className="p-2">
                       <Link
-                        href={"/profile" + "/" + currentUserId}
+                        href={`/profile/${currentUserId}`} // Use template literal
                         className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200"
                         onClick={() => setIsDropdownOpen(false)}
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         <span>Profil</span>
                       </Link>
                       <div className="h-px bg-gray-700/50 my-2"></div>
                       <Link
-                        href="/login"
+                        href="/login" // Navigates to login, onClick handles logout logic
                         className="flex items-center space-x-3 px-4 py-3 text-gray-300 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-200"
                         onClick={handleLogout}
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                         <span>Çıkış Yap</span>
                       </Link>
                     </div>
@@ -307,8 +306,8 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <Link 
-                href="/login" 
+              <Link
+                href="/login"
                 className="px-4 lg:px-6 py-2.5 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-medium rounded-lg shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all duration-200 transform hover:scale-105"
               >
                 Giriş Yap
@@ -316,35 +315,27 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile Menu Buttons */}
           <div className="flex md:hidden items-center space-x-2">
-            {/* Mobile Search Button */}
+             {/* ... Mobile Menu Buttons ... (no changes needed here based on request) */}
             <button
               onClick={() => setShowMobileSearch(!showMobileSearch)}
               className="p-2 text-gray-300 hover:text-white transition-colors duration-200"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             </button>
-
-            {/* Mobile Hamburger Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="p-2 text-gray-300 hover:text-white transition-colors duration-200"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                      d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
-              </svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} /></svg>
             </button>
           </div>
         </div>
 
-        {/* Mobile Search Bar */}
         {showMobileSearch && (
           <div className="md:hidden mt-4 relative" ref={searchRef}>
-            <div className="relative">
+            {/* ... Mobile Search Bar ... (no changes needed here based on request) */}
+             <div className="relative">
               <input
                 type="text"
                 placeholder="Film ara..."
@@ -363,10 +354,8 @@ export default function Navbar() {
                 )}
               </div>
             </div>
-
-            {/* Mobile Search Results */}
             {showSearchResults && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-2xl border border-gray-700/50 z-[9999] max-h-80 overflow-y-auto">
+             <div className="absolute top-full left-0 right-0 mt-2 bg-gray-800/95 backdrop-blur-lg rounded-xl shadow-2xl border border-gray-700/50 z-[60] max-h-80 overflow-y-auto"> {/* Ensure z-index is higher than nav if needed, but lower than dropdown */}
                 {searchResults.length > 0 ? (
                   <div className="p-2">
                     {searchResults.map((movie) => (
@@ -409,12 +398,20 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden mt-4 pb-4 border-t border-gray-700/50">
             <div className="flex flex-col space-y-4 pt-4">
-              <Link 
-                href="/about" 
+              {isLoggedIn && isAdmin && (
+                <Link
+                  href="/admin"
+                  className="text-gray-300 hover:text-white transition-colors duration-200 px-2 py-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
+              <Link
+                href="/about"
                 className="text-gray-300 hover:text-white transition-colors duration-200 px-2 py-2"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -423,29 +420,32 @@ export default function Navbar() {
               
               {isLoggedIn ? (
                 <>
-                  <Link
-                    href={"/profile" + "/" + currentUserId}
-                    className="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors duration-200 px-2 py-2"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-medium">{firstLetterOfUsername}</span>
-                    </div>
-                    <span>Profil</span>
-                  </Link>
+                  {currentUserId !== null && ( // Check currentUserId is not null
+                    <Link
+                      href={`/profile/${currentUserId}`}
+                      className="flex items-center space-x-3 text-gray-300 hover:text-white transition-colors duration-200 px-2 py-2"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <span>Profil</span>
+                    </Link>
+                  )}
                   <button
-                    onClick={handleLogout}
+                    onClick={() => {
+                        handleLogout(); // Call logout logic
+                        // Link component will handle navigation if this button becomes a Link
+                        // For now, it just logs out. Consider if navigation is needed here.
+                        // If this button should navigate to /login, change it to a Link
+                        // or use router.push('/login') after handleLogout.
+                      }}
                     className="flex items-center space-x-3 text-gray-300 hover:text-red-400 transition-colors duration-200 px-2 py-2 text-left"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                     <span>Çıkış Yap</span>
                   </button>
                 </>
               ) : (
-                <Link 
-                  href="/login" 
+                <Link
+                  href="/login"
                   className="inline-flex items-center justify-center px-6 py-2.5 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-medium rounded-lg shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all duration-200"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >

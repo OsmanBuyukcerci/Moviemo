@@ -15,13 +15,6 @@ export interface User {
   surname: string;
   username: string;
   email: string;
-  userRole: UserRole;
-}
-
-export enum UserRole {
-  Basic = 0,
-  Admin = 1,
-  Manager = 2,
 }
 
 // Translation map for field labels and prompts
@@ -31,21 +24,6 @@ const fieldTranslations: Record<keyof User, string> = {
   surname: 'Soyad',
   username: 'Kullanıcı Adı',
   email: 'E-posta',
-  userRole: 'Kullanıcı Rolü',
-};
-
-// Translation map for userRole values
-const roleTranslations: Record<UserRole, string> = {
-  [UserRole.Basic]: 'Temel',
-  [UserRole.Admin]: 'Yönetici',
-  [UserRole.Manager]: 'Müdür',
-};
-
-// Reverse mapping for userRole input parsing
-const roleInputMap: Record<string, UserRole> = {
-  temel: UserRole.Basic,
-  yönetici: UserRole.Admin,
-  müdür: UserRole.Manager,
 };
 
 // Map frontend field names to backend DTO property names
@@ -55,7 +33,6 @@ const dtoFieldMap: Record<keyof User, string> = {
   surname: 'Surname',
   username: 'Username',
   email: 'Email',
-  userRole: 'UserRole',
 };
 
 export default function ProfilePage() {
@@ -108,28 +85,11 @@ export default function ProfilePage() {
   const handleEdit = async (field: keyof User) => {
     if (!userData) return;
 
-    // Restrict userRole editing to Managers
-    if (field === 'userRole' && currentUser?.userRole !== UserRole.Manager) {
-      setError('Yalnızca Müdür rolüne sahip kullanıcılar Kullanıcı Rolü’nü değiştirebilir.');
-      return;
-    }
-
     let newValue: string | number = prompt(
       `Yeni ${fieldTranslations[field]}:`,
       getDisplayValue(field, userData[field])
     ) || '';
     if (newValue.trim() === '') return; // Cancelled or empty
-
-    // Handle userRole specifically
-    if (field === 'userRole') {
-      const normalizedValue = newValue.toLowerCase();
-      if (normalizedValue in roleInputMap) {
-        newValue = roleInputMap[normalizedValue];
-      } else {
-        setError('Geçersiz rol. Temel, Yönetici veya Müdür kullanın.');
-        return;
-      }
-    }
 
     setIsLoading(true);
     try {
@@ -153,13 +113,10 @@ export default function ProfilePage() {
   };
 
   // Define fields to display
-  const fields: (keyof User)[] = ['name', 'surname', 'username', 'email', 'userRole'];
+  const fields: (keyof User)[] = ['name', 'surname', 'username', 'email'];
 
   // Convert userRole enum to string for display
   const getDisplayValue = (field: keyof User, value: any): string => {
-    if (field === 'userRole') {
-      return roleTranslations[value as UserRole] || String(value);
-    }
     return String(value || '');
   };
 
@@ -210,11 +167,11 @@ export default function ProfilePage() {
                       value={getDisplayValue(field, userData[field])}
                       className="block w-full pl-10 pr-12 py-3 border border-gray-600 rounded-lg bg-gray-800/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                     />
-                    {currentUser?.userRole == UserRole.Manager && <button
+                    {currentUser?.username == localStorage.getItem('username') && <button
                       type="button"
                       onClick={() => handleEdit(field)}
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
-                      disabled={isLoading || (field === 'userRole' && currentUser?.userRole !== UserRole.Manager)}
+                      disabled={isLoading}
                     >
                       <EditIcon />
                     </button>
@@ -228,14 +185,14 @@ export default function ProfilePage() {
           )}
 
           {/* Password Change Button */}
-          <div className="mt-6">
+          {currentUser?.username == localStorage.getItem('username') && <div className="mt-6">
             <Link
               href={`/profile/${id}/change-password`}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105"
             >
               Parola Değiştir
             </Link>
-          </div>
+          </div>}
 
           {/* Footer */}
           <div className="mt-8 text-center">

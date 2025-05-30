@@ -197,7 +197,9 @@ namespace Moviemo.Services
                 if (User == null)
                     return new UpdateResponseDto { Issue = UpdateIssue.NotFound };
 
-                if (User.Id != UserId)
+                var UserThatUpdate = await _Context.Users.FindAsync(UserId);
+
+                if (User.Id != UserId && UserThatUpdate.UserRole != UserRole.Manager)
                     return new UpdateResponseDto { Issue = UpdateIssue.NotOwner };
 
                 var DtoProperties = Dto.GetType().GetProperties();
