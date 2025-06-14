@@ -314,7 +314,7 @@ namespace Moviemo.Services
             return Result;
         }
 
-        public async Task<PasswordChangeResponseDto> ChangePasswordAsync(ChangePasswordDto Dto, long Id, long UserId)
+        public async Task<PasswordChangeResponseDto?> ChangePasswordAsync(ChangePasswordDto Dto, long Id, long UserId)
         {
             _Logger.LogInformation("User ID'si {Id} olan kullanıcı parolasını değiştiriyor...", UserId);
 
