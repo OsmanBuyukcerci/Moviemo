@@ -222,13 +222,6 @@ namespace Moviemo.Services
                         return new UpdateResponseDto { Issue = UpdateIssue.SameContent };
                     }
 
-                    if (Property.Name == "Password" && Dto.Password != null)
-                    {
-                        NewValue = new PasswordHasher<User>()
-                            .HashPassword(User, Dto.Password);
-                    }
-
-
                     TargetProperty.SetValue(User, NewValue);
                 }
 
