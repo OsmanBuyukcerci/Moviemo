@@ -209,7 +209,6 @@ namespace Moviemo.Services
             }
         }
 
-        [HttpGet("search")]
         public async Task<List<SearchResponseDto>?> SearchAsync(string Query)
         {
             _Logger.LogInformation("{Query} başlığı aranıyor...", Query);
