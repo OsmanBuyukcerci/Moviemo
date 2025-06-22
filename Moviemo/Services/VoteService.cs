@@ -85,7 +85,7 @@ namespace Moviemo.Services
             }
             catch (Exception Ex)
             {
-                _Logger.LogError("Filme ait tüm yorum bilgileri alınırken bir sorun meydana geldi.");
+                _Logger.LogError(Ex, "Filme ait tüm yorum bilgileri alınırken bir sorun meydana geldi.");
                 return null;
             }
         }
@@ -170,7 +170,7 @@ namespace Moviemo.Services
                     return new DeleteResponseDto { Issue = DeleteIssue.NotFound };
 
                 if (Vote.UserId != UserId)
-                    return new DeleteResponseDto() { Issue = DeleteIssue.NotOwner };
+                    return new DeleteResponseDto { Issue = DeleteIssue.NotOwner };
 
                 _Context.Votes.Remove(Vote);
 
