@@ -46,7 +46,7 @@ namespace Moviemo.Services
                             MovieId = M.Id,
                             UserScore = R.UserScore,
                             CreatedAt = R.CreatedAt,
-                            UpdatedAt = R.CreatedAt,
+                            UpdatedAt = R.UpdatedAt,
                         }).ToList(),
                         Comments = M.Comments.Select(C => new CommentGetDto
                         {
@@ -55,7 +55,7 @@ namespace Moviemo.Services
                             UserId = C.UserId,
                             MovieId = M.Id,
                             CreatedAt = C.CreatedAt,
-                            UpdatedAt = C.CreatedAt,
+                            UpdatedAt = C.UpdatedAt,
                             DownvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Downvote),
                             UpvoteCounter = C.Votes.Count(V => V.VoteType == VoteType.Upvote)
                         }).ToList()
