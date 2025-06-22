@@ -97,7 +97,7 @@ namespace Moviemo.Services
             }
             catch (Exception Ex)
             {
-                _Logger.LogError("Filme ait tüm yorum bilgileri alınırken bir sorun meydana geldi.");
+                _Logger.LogError(Ex, "Filme ait tüm yorum bilgileri alınırken bir sorun meydana geldi.");
                 return null;
             }
         }
