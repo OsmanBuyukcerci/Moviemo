@@ -92,7 +92,7 @@ namespace Moviemo.Services
             }
             catch (Exception Ex)
             {
-                _Logger.LogError("Filme ait incelemeler alınırken bir sorun meydana geldi.");
+                _Logger.LogError(Ex, "Filme ait incelemeler alınırken bir sorun meydana geldi.");
                 return null;
             }
         }
