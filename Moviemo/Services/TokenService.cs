@@ -11,7 +11,7 @@ using Moviemo.Services.Interfaces;
 
 namespace Moviemo.Services
 {
-    public class TokenService(IConfiguration Configuration, AppDbContext Context, ILogger<TokenService> Logger) : ITokenInterface
+    public class TokenService(IConfiguration Configuration, AppDbContext Context, ILogger<TokenService> Logger) : ITokenService
     {
         public async Task<TokenResponseDto> CreateTokenResponseAsync(User User)
         {
