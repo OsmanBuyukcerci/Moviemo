@@ -113,11 +113,11 @@ namespace Moviemo.Services
             try
             {
                 var Claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, User.Username),
-                new Claim(ClaimTypes.NameIdentifier, User.Id.ToString()),
-                new Claim(ClaimTypes.Role, User.UserRole.ToString())
-            };
+                {
+                    new Claim(ClaimTypes.Name, User.Username),
+                    new Claim(ClaimTypes.NameIdentifier, User.Id.ToString()),
+                    new Claim(ClaimTypes.Role, User.UserRole.ToString())
+                };
 
                 var Key = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(Configuration.GetValue<string>("AppSettings:Token")!));

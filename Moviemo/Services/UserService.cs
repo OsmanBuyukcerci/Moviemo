@@ -17,9 +17,9 @@ namespace Moviemo.Services
 
         private readonly AppDbContext _Context;
 
-        private readonly ITokenInterface _TokenService;
+        private readonly ITokenService _TokenService;
 
-        public UserService(ILogger<UserService> Logger, AppDbContext Context, ITokenInterface TokenService)
+        public UserService(ILogger<UserService> Logger, AppDbContext Context, ITokenService TokenService)
         {
             _Logger = Logger;
             _Context = Context;
