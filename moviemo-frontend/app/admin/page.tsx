@@ -263,10 +263,7 @@ const AdminPanel: React.FC = () => {
 
   const handleEditMovie = async () => {
     if (!selectedMovieForEdit) return;
-    if (!editMovieFormData.title || !editMovieFormData.overview) {
-      alert('Lütfen başlık ve açıklama alanlarını doldurun!');
-      return;
-    }
+
     const changedFields: Partial<MovieCreateDto> = {};
     (Object.keys(editMovieFormData) as Array<keyof MovieCreateDto>).forEach(key => {
       if (editMovieFormData[key] !== originalMovieData[key]) {
