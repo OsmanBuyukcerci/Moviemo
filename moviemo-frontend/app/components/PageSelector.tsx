@@ -3,13 +3,6 @@ import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 import { Movie } from '../types/movie';
 
 interface PaginationProps {
-  total: number;
-  pageIndex: number;
-  pageSize: number;
-  className?: string;
-}
-
-interface PaginationProps {
     total: number;
     pageIndex: number;
     pageSize: number;
