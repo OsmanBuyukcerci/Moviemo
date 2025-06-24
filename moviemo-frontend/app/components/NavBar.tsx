@@ -52,17 +52,9 @@ export default function Navbar() {
     }
     setIsSearching(true);
     try {
-      const token = localStorage.getItem('accessToken'); // Get token for the request
-      if (!token) { // Early exit if no token, though search might be public
-        // Decide how to handle search without token if it's a protected route
-        // For now, let's assume it might proceed or your API handles it
-      }
       const response = await fetch(searchApiUrl + `${encodeURIComponent(query)}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Use the fetched token
-        }
+        headers: apiService.getHeaders()
       });
       if (response.ok) {
         const results = await response.json();
