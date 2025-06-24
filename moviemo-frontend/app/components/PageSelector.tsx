@@ -9,13 +9,6 @@ interface PaginationProps {
   className?: string;
 }
 
-interface ApiResponse {
-  data: Movie[];
-  total: number;
-  pageIndex: number;
-  pageSize: number;
-}
-
 interface PaginationProps {
     total: number;
     pageIndex: number;
